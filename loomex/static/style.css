@@ -1,0 +1,274 @@
+/* ============================================================
+   LOOMEX — design tokens
+   Palette: warp-thread gold + dyed-teal on a dark loom-shadow base.
+   Display type is a tall condensed face (Big Shoulders) — deliberately
+   chosen to look like vertical warp threads, echoing the brand name.
+   ============================================================ */
+
+:root {
+  --ink: #201c18;          /* near-black warm brown — page background */
+  --ink-raised: #2a241e;   /* cards / raised surfaces on dark */
+  --stone: #e7e2d6;        /* pale flax — light section background */
+  --stone-line: #d8d1c0;   /* hairline on light sections */
+  --paper: #f1ece2;        /* off-white text on dark */
+  --paper-dim: #b9b2a4;    /* secondary text on dark */
+  --ink-on-stone: #201c18; /* body text on light sections */
+  --ink-dim-on-stone: #5c5648;
+  --gold: #c79a46;         /* thread gold — primary accent */
+  --gold-dim: #8f7239;
+  --teal: #4f6d6a;         /* dye-vat teal — secondary accent, used sparingly */
+  --line: rgba(241, 236, 226, 0.14);
+  --radius: 2px;
+  --max: 560px;             /* mobile-first content width, comfortable on phones */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+.display {
+  font-family: "Big Shoulders Display", "Inter", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 0.92;
+}
+
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 18px; }
+
+/* ---------- warp-thread motif (the signature element) ---------- */
+.warp-bg {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--line) 0px,
+    var(--line) 1px,
+    transparent 1px,
+    transparent 14px
+  );
+}
+
+.thread-rule {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 28px 0;
+}
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  max-width: var(--max);
+  margin: 0 auto;
+}
+.logo {
+  font-family: "Big Shoulders Display", sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.12em;
+  color: var(--paper);
+}
+.logo span { color: var(--gold); }
+
+/* ---------- hero ---------- */
+.hero {
+  padding: 46px 0 30px;
+  text-align: left;
+}
+.hero .eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+.hero h1 {
+  font-size: 44px;
+  margin: 0 0 14px;
+  color: var(--paper);
+}
+.hero p {
+  color: var(--paper-dim);
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 34ch;
+  margin: 0;
+}
+
+/* ---------- category chips ---------- */
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 18px 18px 4px;
+  max-width: var(--max);
+  margin: 0 auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: var(--paper-dim);
+  white-space: nowrap;
+}
+.chip.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------- product grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 18px;
+  max-width: var(--max);
+  margin: 0 auto;
+}
+.card {
+  background: var(--ink-raised);
+  border: 1px solid var(--line);
+}
+.card img { aspect-ratio: 4 / 5; object-fit: cover; width: 100%; }
+.card-body { padding: 10px 12px 14px; }
+.card-name { font-size: 13.5px; color: var(--paper); margin: 0 0 4px; }
+.card-price { font-size: 13px; color: var(--gold); font-weight: 600; }
+.empty {
+  padding: 40px 18px;
+  color: var(--paper-dim);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ---------- product detail ---------- */
+.pd-image img { width: 100%; aspect-ratio: 4/5; object-fit: cover; }
+.pd-body { padding: 20px 18px 40px; max-width: var(--max); margin: 0 auto; }
+.pd-name { font-size: 30px; margin: 0 0 6px; }
+.pd-price { color: var(--gold); font-size: 18px; font-weight: 600; margin-bottom: 18px; }
+.pd-desc { color: var(--paper-dim); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+
+.field-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  margin-bottom: 8px;
+  display: block;
+}
+.pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+.pill {
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--paper);
+}
+.pill input { display: none; }
+.pill:has(input:checked) { border-color: var(--gold); color: var(--gold); }
+
+.qty-row { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+.qty-row input {
+  width: 56px; text-align: center; padding: 8px 4px;
+  background: var(--ink-raised); border: 1px solid var(--line); color: var(--paper);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 15px 18px;
+  background: var(--gold);
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+.btn:hover { background: var(--gold-dim); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--paper-dim);
+  color: var(--paper);
+}
+
+/* ---------- checkout ---------- */
+.checkout { background: var(--stone); color: var(--ink-on-stone); min-height: 100vh; }
+.checkout .wrap { padding: 26px 18px 60px; }
+.checkout h1 { color: var(--ink-on-stone); font-size: 28px; margin-bottom: 4px; }
+.checkout .sub { color: var(--ink-dim-on-stone); font-size: 13px; margin-bottom: 26px; }
+
+.summary-line {
+  display: flex; justify-content: space-between; padding: 10px 0;
+  border-bottom: 1px solid var(--stone-line); font-size: 13.5px;
+}
+.summary-total { font-weight: 700; font-size: 15px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-dim-on-stone); margin-bottom: 6px;
+}
+.form-group input, .form-group select {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--stone-line);
+  background: #fff; font-size: 14.5px; color: var(--ink-on-stone);
+  font-family: inherit;
+}
+
+.pay-option {
+  border: 1px solid var(--stone-line);
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.pay-option:has(input:checked) { border-color: var(--teal); background: #fff; }
+.pay-option strong { display: block; font-size: 14px; }
+.pay-option span { font-size: 12.5px; color: var(--ink-dim-on-stone); }
+
+/* ---------- success ---------- */
+.success { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; }
+.success .order-no {
+  font-family: "Big Shoulders Display", sans-serif;
+  font-size: 42px; color: var(--gold); letter-spacing: 0.05em; margin: 14px 0;
+}
+
+/* ---------- footer ---------- */
+.footer { padding: 40px 18px 60px; border-top: 1px solid var(--line); margin-top: 30px; }
+.footer .wrap { text-align: center; }
+.footer p { color: var(--paper-dim); font-size: 12px; letter-spacing: 0.04em; }
+
+@media (min-width: 560px) {
+  .grid { grid-template-columns: repeat(3, 1fr); }
+  .hero h1 { font-size: 56px; }
+}
