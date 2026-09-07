@@ -96,6 +96,20 @@ Supabase → **Storage** → create a bucket called `products` → set it to
 **Public** → upload your photos there. Click a file → **Copy URL** → paste
 that into the product's `image_url` field.
 
+### 3.5 Color carousel (currently used for pants)
+
+Any product can show a swipeable carousel — one photo per color — instead
+of a single image. To turn it on for a product, fill in its `color_images`
+column in the Supabase Table Editor with JSON like:
+
+```json
+{"Black": "https://your-storage-url/pants-black.jpg", "Olive": "https://your-storage-url/pants-olive.jpg"}
+```
+
+The keys must exactly match the entries in that product's `colors` column.
+Leave `color_images` as `{}` (empty) for products that should just show one
+photo — that's the default for everything except the sample pants.
+
 ---
 
 ## 4. Push your changes
@@ -132,20 +146,20 @@ whatever you buy) and follow the DNS instructions it gives you.
 
 ---
 
-## 6. Online payment (when you're ready)
+## 6. Online payment (optional, off by default)
 
-Cash on Delivery works out of the box. For online payments, Egypt-friendly
-options that support cards and mobile wallets:
+The site currently only supports **Cash on Delivery** — that's the
+intentional default. If you want to add online payment back later,
+Egypt-friendly options that support cards and mobile wallets:
 
 - **[Paymob](https://paymob.com)** — widely used by Egyptian small brands, has a hosted checkout iframe.
 - **[Kashier](https://kashier.io)** — similar, good docs.
 - **[Fawry](https://fawry.com)** — strong if you want Fawry-pay-at-kiosk as an option too.
 
-Once you sign up and get API keys, open `main.py` and look for the comment
-block **"ONLINE PAYMENT INTEGRATION POINT"** inside the `place_order`
-function — that's exactly where to call the gateway's API and redirect the
-customer to their hosted payment page instead of straight to the success page.
-Each gateway's docs include a Python/HTTP example you can drop in there.
+To bring it back: add a payment-method choice to the checkout form in
+`templates.py`, and branch on it in the `place_order` function in
+`main.py` (there's a comment there pointing to this exact spot) to call
+the gateway's API before redirecting to the success page.
 
 ---
 

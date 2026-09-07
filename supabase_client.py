@@ -12,7 +12,14 @@ NEVER put the service role key in any file that ships to the browser
 """
 
 import os
+from dotenv import load_dotenv
 from supabase import create_client, Client
+
+# Loads variables from a local .env file into os.environ. In production on
+# Vercel this line does nothing (there's no .env file there), which is
+# fine — Vercel injects the environment variables you set in its dashboard
+# directly, no file needed.
+load_dotenv()
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")

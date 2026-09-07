@@ -14,6 +14,7 @@ create table products (
   sizes text[] not null default '{"S","M","L","XL"}',
   colors text[] not null default '{}',
   image_url text,
+  color_images jsonb not null default '{}'::jsonb,  -- e.g. {"Black": "https://...", "Olive": "https://..."}
   in_stock boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -70,5 +71,10 @@ create policy "Public can view in-stock products"
 insert into products (name, slug, description, category, price, sizes, colors, image_url) values
 ('Essential Crew Tee', 'essential-crew-tee', 'Heavyweight cotton tee cut for everyday wear.', 'tops', 450.00, '{"S","M","L","XL"}', '{"Black","Sand","White"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
 ('Ribbed Tank', 'ribbed-tank', 'Fitted ribbed tank in soft stretch cotton.', 'tank-tops', 320.00, '{"S","M","L"}', '{"Black","Sand"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
-('Relaxed Jogger Pants', 'relaxed-jogger-pants', 'Loomex''s signature jogger, tapered leg, deep pockets.', 'pants', 750.00, '{"S","M","L","XL"}', '{"Black","Olive"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
 ('Loop-Back Shorts', 'loop-back-shorts', 'Loop-back cotton shorts for lounging or the gym.', 'shorts', 420.00, '{"S","M","L","XL"}', '{"Black","Sand","Olive"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex');
+
+-- Pants get a photo per color, used to power the color carousel on its product page.
+insert into products (name, slug, description, category, price, sizes, colors, image_url, color_images) values
+('Relaxed Jogger Pants', 'relaxed-jogger-pants', 'Loomex''s signature jogger, tapered leg, deep pockets.', 'pants', 750.00, '{"S","M","L","XL"}', '{"Black","Olive"}',
+ 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex+Black',
+ '{"Black": "https://placehold.co/600x750/201c18/f1ece2?text=Loomex+Black", "Olive": "https://placehold.co/600x750/4f6d3a/f1ece2?text=Loomex+Olive"}');
