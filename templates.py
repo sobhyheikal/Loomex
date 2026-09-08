@@ -144,20 +144,29 @@ def product_page(p: dict, categories: list, cart_count: int = 0) -> str:
         for i, s in enumerate(p["sizes"])
     )
 
+    # color_images format: {"Black": ["url1", "url2"], "Olive": ["url3"]}
+    # Each color can have its own set of photos, swipeable via the carousel.
+    # Tapping a color pill swaps which color's photo set is showing (plain
+    # inline JS toggling display — no page reload needed).
     color_images = p.get("color_images") or {}
     colors = p.get("colors") or []
 
     if color_images:
-        slides = "".join(
-            f'<div class="carousel-slide" id="slide-{escape(c)}">'
-            f'<img src="{escape(color_images.get(c, p.get("image_url") or ""))}" alt="{escape(p["name"])} in {escape(c)}"></div>'
-            for c in colors
+        groups = "".join(
+            f"""<div class="gallery-group" id="ggroup-{escape(c)}" style="display:{'block' if i == 0 else 'none'};">
+                  <div class="carousel">{"".join(
+                      f'<div class="carousel-slide"><img src="{escape(url)}" alt="{escape(p["name"])} in {escape(c)}"></div>'
+                      for url in (color_images.get(c) or [p.get("image_url") or ""])
+                  )}</div>
+                </div>"""
+            for i, c in enumerate(colors)
         )
-        image_block = f'<div class="carousel">{slides}</div>'
+        image_block = f'<div class="gallery">{groups}</div>'
         color_pills = "".join(
-            f'<label class="pill"><a href="#slide-{escape(c)}" style="text-decoration:none;color:inherit;display:block;">'
+            f'<label class="pill" onclick="document.querySelectorAll(\'.gallery-group\').forEach(g=>g.style.display=\'none\');'
+            f"document.getElementById('ggroup-{escape(c)}').style.display='block';\">"
             f'<input type="radio" name="color" value="{escape(c)}"'
-            f'{" checked" if i == 0 else ""} style="display:none;">{escape(c)}</a></label>'
+            f'{" checked" if i == 0 else ""} style="display:none;">{escape(c)}</label>'
             for i, c in enumerate(colors)
         )
     else:
