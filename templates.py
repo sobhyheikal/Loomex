@@ -136,6 +136,7 @@ def shop_page(products: list, categories: list, active_category: str | None, car
 """
     return layout("Shop", body, categories, cart_count, active_category=active_category)
 
+
 def product_page(p: dict, categories: list, cart_count: int = 0) -> str:
     size_pills = "".join(
         f'<label class="pill"><input type="radio" name="size" value="{escape(s)}"'
