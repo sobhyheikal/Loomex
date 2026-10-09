@@ -44,13 +44,17 @@ def _category_links(categories: list, subcategories: dict | None = None, active:
         label = c.replace("-", " ").title()
         cls = " active" if active == c and not active_sub else ""
         links.append(f'<a href="{base}?category={c}" class="drawer-sub-link{cls}">{escape(label)}</a>')
-        for s in subcategories.get(c, []):
-            s_label = s.replace("-", " ").title()
-            s_cls = " active" if active == c and active_sub == s else ""
-            links.append(
-                f'<a href="{base}?category={c}&amp;subcategory={s}" '
-                f'class="drawer-sub-link drawer-sub-sub-link{s_cls}">{escape(s_label)}</a>'
-            )
+        subs = subcategories.get(c, [])
+        if subs:
+            sub_links = []
+            for s in subs:
+                s_label = s.replace("-", " ").title()
+                s_cls = " active" if active == c and active_sub == s else ""
+                sub_links.append(
+                    f'<a href="{base}?category={c}&amp;subcategory={s}" '
+                    f'class="drawer-sub-sub-link{s_cls}">{escape(s_label)}</a>'
+                )
+            links.append(f'<div class="drawer-sub-nested">{"".join(sub_links)}</div>')
     return "".join(links)
 
 
@@ -130,19 +134,20 @@ def shop_page(products: list, categories: list, active_category: str | None, car
     sub_chips_html = ""
     sub_items = subcategories.get(active_category) if active_category else None
     if sub_items:
-        sub_chips = [
-            '<a href="/shop?category={}" class="chip chip-sub{}">All</a>'.format(
-                active_category, "" if not active_subcategory else " active"
+        cat_label = active_category.replace("-", " ").title()
+        sub_tabs = [
+            '<a href="/shop?category={}" class="subtab{}">All {}</a>'.format(
+                active_category, "" if not active_subcategory else " active", escape(cat_label)
             )
         ]
         for s in sub_items:
             s_active = " active" if active_subcategory == s else ""
             s_label = s.replace("-", " ").title()
-            sub_chips.append(
+            sub_tabs.append(
                 f'<a href="/shop?category={active_category}&subcategory={s}" '
-                f'class="chip chip-sub{s_active}">{escape(s_label)}</a>'
+                f'class="subtab{s_active}">{escape(s_label)}</a>'
             )
-        sub_chips_html = f'<nav class="chips chips-sub">{"".join(sub_chips)}</nav>'
+        sub_chips_html = f'<nav class="subtabs">{"".join(sub_tabs)}</nav>'
 
     if products:
         cards = "".join(
