@@ -79,16 +79,21 @@ uvicorn main:app --reload
 ```
 
 5. Open `http://127.0.0.1:8000` — you should see the Loomex homepage with the
-   4 sample products. Click through to a product, place a test order, and
+   sample products. Click through to a product, place a test order, and
    check **Supabase → Table Editor → orders** to confirm it saved.
 
 ### 3.3 Add your real products
 
 Easiest way for now: **Supabase → Table Editor → products → Insert row**.
 Fill in name, slug (URL-friendly, e.g. `essential-crew-tee`), category
-(must be exactly `tops`, `tank-tops`, `pants`, or `shorts`), price, sizes,
-colors, and an image URL. You can delete the 4 sample rows once you have
-your own.
+(must be exactly `tops`, `tank-tops`, `pants`, `pullovers`, `quarter-zips`,
+or `jackets`), price, sizes, colors, and an image URL. You can delete the
+sample rows once you have your own.
+
+`pants` has subcategories: set `subcategory` to `joggers` or
+`checkered-pants` (or leave it blank for plain pants). These show up as a
+second row of filter chips / a nested drawer menu under "Pants" on the
+site — see `SUBCATEGORIES` in `main.py` if you want to add more.
 
 ### 3.4 Product photos
 

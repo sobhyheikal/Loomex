@@ -9,7 +9,8 @@ create table products (
   name text not null,
   slug text unique not null,
   description text,
-  category text not null check (category in ('tops', 'tank-tops', 'pants', 'shorts')),
+  category text not null check (category in ('tops', 'tank-tops', 'pants', 'pullovers', 'quarter-zips', 'jackets')),
+  subcategory text check (subcategory is null or subcategory in ('joggers', 'checkered-pants')),
   price numeric(10,2) not null,
   sizes text[] not null default '{"S","M","L","XL"}',
   colors text[] not null default '{}',
@@ -71,10 +72,17 @@ create policy "Public can view in-stock products"
 insert into products (name, slug, description, category, price, sizes, colors, image_url) values
 ('Essential Crew Tee', 'essential-crew-tee', 'Heavyweight cotton tee cut for everyday wear.', 'tops', 450.00, '{"S","M","L","XL"}', '{"Black","Sand","White"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
 ('Ribbed Tank', 'ribbed-tank', 'Fitted ribbed tank in soft stretch cotton.', 'tank-tops', 320.00, '{"S","M","L"}', '{"Black","Sand"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
-('Loop-Back Shorts', 'loop-back-shorts', 'Loop-back cotton shorts for lounging or the gym.', 'shorts', 420.00, '{"S","M","L","XL"}', '{"Black","Sand","Olive"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex');
+('Fleece Pullover', 'fleece-pullover', 'Brushed fleece pullover with a relaxed hood, built for layering on cool nights.', 'pullovers', 650.00, '{"S","M","L","XL"}', '{"Black","Sand","Olive"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
+('Brushed Quarter-Zip', 'brushed-quarter-zip', 'Half-zip pullover in brushed fleece, a clean layer for cooler mornings.', 'quarter-zips', 680.00, '{"S","M","L","XL"}', '{"Black","Olive"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
+('Loomex Field Jacket', 'loomex-field-jacket', 'Heavyweight field jacket built to layer over everything else.', 'jackets', 1200.00, '{"S","M","L","XL"}', '{"Black","Olive"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex');
 
--- Pants get a photo per color, used to power the color carousel on its product page.
-insert into products (name, slug, description, category, price, sizes, colors, image_url, color_images) values
-('Relaxed Jogger Pants', 'relaxed-jogger-pants', 'Loomex''s signature jogger, tapered leg, deep pockets.', 'pants', 750.00, '{"S","M","L","XL"}', '{"Black","Olive"}',
+-- Pants: joggers and checkered-pants subcategories. Jogger pants get a photo
+-- per color, used to power the color carousel on their product page.
+insert into products (name, slug, description, category, subcategory, price, sizes, colors, image_url, color_images) values
+('Relaxed Jogger Pants', 'relaxed-jogger-pants', 'Loomex''s signature jogger, tapered leg, deep pockets.', 'pants', 'joggers', 750.00, '{"S","M","L","XL"}', '{"Black","Olive"}',
  'https://placehold.co/600x750/201c18/f1ece2?text=Loomex+Black',
  '{"Black": "https://placehold.co/600x750/201c18/f1ece2?text=Loomex+Black", "Olive": "https://placehold.co/600x750/4f6d3a/f1ece2?text=Loomex+Olive"}');
+
+insert into products (name, slug, description, category, subcategory, price, sizes, colors, image_url) values
+('Cuffed Jogger Pants', 'cuffed-jogger-pants', 'Tapered joggers in heavyweight cotton, cuffed at the ankle for an easy fit.', 'pants', 'joggers', 480.00, '{"S","M","L","XL"}', '{"Black","Sand","Olive"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex'),
+('Checkered Flannel Pants', 'checkered-flannel-pants', 'Brushed flannel pants in a classic check, relaxed through the leg.', 'pants', 'checkered-pants', 520.00, '{"S","M","L","XL"}', '{"Black Check","Grey Check"}', 'https://placehold.co/600x750/201c18/f1ece2?text=Loomex');

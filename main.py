@@ -25,7 +25,8 @@ app = FastAPI()
 # Serving /static/* — Vercel promotes this to its CDN automatically.
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-CATEGORIES = ["tops", "tank-tops", "pants", "shorts"]
+CATEGORIES = ["tops", "tank-tops", "pants", "pullovers", "quarter-zips", "jackets"]
+SUBCATEGORIES = {"pants": ["joggers", "checkered-pants"]}
 CART_COOKIE = "loomex_cart"
 
 
@@ -95,17 +96,26 @@ def _get_product_or_404(slug: str):
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     cart_count = cart_item_count(get_cart(request))
-    return templates.landing_page(CATEGORIES, cart_count)
+    return templates.landing_page(CATEGORIES, cart_count, subcategories=SUBCATEGORIES)
 
 
 @app.get("/shop", response_class=HTMLResponse)
-def shop(request: Request, category: str | None = None):
+def shop(request: Request, category: str | None = None, subcategory: str | None = None):
     query = supabase.table("products").select("*").eq("in_stock", True)
     if category in CATEGORIES:
         query = query.eq("category", category)
+        if subcategory in SUBCATEGORIES.get(category, []):
+            query = query.eq("subcategory", subcategory)
+        else:
+            subcategory = None
+    else:
+        subcategory = None
     result = query.order("created_at", desc=True).execute()
     cart_count = cart_item_count(get_cart(request))
-    return templates.shop_page(result.data, CATEGORIES, category, cart_count)
+    return templates.shop_page(
+        result.data, CATEGORIES, category, cart_count,
+        subcategories=SUBCATEGORIES, active_subcategory=subcategory,
+    )
 
 
 # ------------------------------------------------------------- product ----
@@ -115,7 +125,7 @@ def product_detail(request: Request, slug: str):
     if not p:
         return HTMLResponse("<h1>Product not found</h1>", status_code=404)
     cart_count = cart_item_count(get_cart(request))
-    return templates.product_page(p, CATEGORIES, cart_count)
+    return templates.product_page(p, CATEGORIES, cart_count, subcategories=SUBCATEGORIES)
 
 
 # ----------------------------------------------------------------- cart ----
@@ -147,7 +157,7 @@ def view_cart(request: Request):
     cart = get_cart(request)
     lines, subtotal = resolve_cart(cart)
     cart_count = cart_item_count(cart)
-    return templates.cart_page(lines, subtotal, CATEGORIES, cart_count)
+    return templates.cart_page(lines, subtotal, CATEGORIES, cart_count, subcategories=SUBCATEGORIES)
 
 
 @app.post("/cart/update")
@@ -179,7 +189,7 @@ def checkout_form(request: Request):
         return RedirectResponse(url="/cart", status_code=303)
     lines, subtotal = resolve_cart(cart)
     cart_count = cart_item_count(cart)
-    return templates.checkout_page(lines, subtotal, CATEGORIES, cart_count)
+    return templates.checkout_page(lines, subtotal, CATEGORIES, cart_count, subcategories=SUBCATEGORIES)
 
 
 @app.post("/checkout", response_class=HTMLResponse)
@@ -248,4 +258,4 @@ def order_success(order_number: str):
     result = supabase.table("orders").select("*").eq("order_number", order_number).single().execute()
     if not result.data:
         return HTMLResponse("<h1>Order not found</h1>", status_code=404)
-    return templates.success_page(result.data, CATEGORIES)
+    return templates.success_page(result.data, CATEGORIES, subcategories=SUBCATEGORIES)

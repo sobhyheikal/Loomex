@@ -36,18 +36,28 @@ fbq('track', 'PageView');
 """
 
 
-def _category_links(categories: list, active: str | None = None, base: str = "/shop") -> str:
+def _category_links(categories: list, subcategories: dict | None = None, active: str | None = None,
+                     active_sub: str | None = None, base: str = "/shop") -> str:
+    subcategories = subcategories or {}
     links = []
     for c in categories:
         label = c.replace("-", " ").title()
-        cls = " active" if active == c else ""
+        cls = " active" if active == c and not active_sub else ""
         links.append(f'<a href="{base}?category={c}" class="drawer-sub-link{cls}">{escape(label)}</a>')
+        for s in subcategories.get(c, []):
+            s_label = s.replace("-", " ").title()
+            s_cls = " active" if active == c and active_sub == s else ""
+            links.append(
+                f'<a href="{base}?category={c}&amp;subcategory={s}" '
+                f'class="drawer-sub-link drawer-sub-sub-link{s_cls}">{escape(s_label)}</a>'
+            )
     return "".join(links)
 
 
 def layout(title: str, body: str, categories: list, cart_count: int = 0,
-           section_class: str = "", active_category: str | None = None) -> str:
-    cat_links = _category_links(categories, active_category)
+           section_class: str = "", active_category: str | None = None,
+           subcategories: dict | None = None, active_subcategory: str | None = None) -> str:
+    cat_links = _category_links(categories, subcategories, active_category, active_subcategory)
     cart_badge = f'<span class="cart-badge">{cart_count}</span>' if cart_count else ""
 
     return f"""<!DOCTYPE html>
@@ -93,27 +103,46 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 </html>"""
 
 
-def landing_page(categories: list, cart_count: int = 0) -> str:
+def landing_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
     body = """
 <section class="hero warp-bg">
   <div class="wrap">
     <p class="eyebrow">Homewear, basic by design</p>
     <h1 class="display">Made to be<br>worn in.</h1>
-    <p>Heavyweight cotton essentials — tops, tanks, pants and shorts built for
-    the hours that don't need an outfit.</p>
+    <p>Heavyweight cotton essentials — tops, joggers, pullovers, quarter-zips
+    and jackets built for the hours that don't need an outfit.</p>
     <a href="/shop" class="btn" style="margin-top:24px;max-width:220px;">Shop Loomex</a>
   </div>
 </section>
 """
-    return layout("Loomex — Homewear", body, categories, cart_count)
+    return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories)
 
 
-def shop_page(products: list, categories: list, active_category: str | None, cart_count: int = 0) -> str:
+def shop_page(products: list, categories: list, active_category: str | None, cart_count: int = 0,
+              subcategories: dict | None = None, active_subcategory: str | None = None) -> str:
+    subcategories = subcategories or {}
     chips = ['<a href="/shop" class="chip{}">All</a>'.format(" active" if not active_category else "")]
     for c in categories:
         active = " active" if active_category == c else ""
         label = c.replace("-", " ").title()
         chips.append(f'<a href="/shop?category={c}" class="chip{active}">{escape(label)}</a>')
+
+    sub_chips_html = ""
+    sub_items = subcategories.get(active_category) if active_category else None
+    if sub_items:
+        sub_chips = [
+            '<a href="/shop?category={}" class="chip chip-sub{}">All</a>'.format(
+                active_category, "" if not active_subcategory else " active"
+            )
+        ]
+        for s in sub_items:
+            s_active = " active" if active_subcategory == s else ""
+            s_label = s.replace("-", " ").title()
+            sub_chips.append(
+                f'<a href="/shop?category={active_category}&subcategory={s}" '
+                f'class="chip chip-sub{s_active}">{escape(s_label)}</a>'
+            )
+        sub_chips_html = f'<nav class="chips chips-sub">{"".join(sub_chips)}</nav>'
 
     if products:
         cards = "".join(
@@ -132,12 +161,14 @@ def shop_page(products: list, categories: list, active_category: str | None, car
 
     body = f"""
 <nav class="chips">{''.join(chips)}</nav>
+{sub_chips_html}
 {grid}
 """
-    return layout("Shop", body, categories, cart_count, active_category=active_category)
+    return layout("Shop", body, categories, cart_count, active_category=active_category,
+                  subcategories=subcategories, active_subcategory=active_subcategory)
 
 
-def product_page(p: dict, categories: list, cart_count: int = 0) -> str:
+def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
     size_pills = "".join(
         f'<label class="pill"><input type="radio" name="size" value="{escape(s)}"'
         f'{" checked" if i == 0 else ""}>{escape(s)}</label>'
@@ -201,10 +232,11 @@ def product_page(p: dict, categories: list, cart_count: int = 0) -> str:
   </form>
 </div>
 """
-    return layout(p["name"], body, categories, cart_count)
+    return layout(p["name"], body, categories, cart_count, subcategories=subcategories)
 
 
-def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 0) -> str:
+def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 0,
+              subcategories: dict | None = None) -> str:
     if not lines:
         body = """
 <div class="wrap">
@@ -213,7 +245,7 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
   <a href="/shop" class="btn">Continue Shopping</a>
 </div>
 """
-        return layout("Your Cart", body, categories, cart_count)
+        return layout("Your Cart", body, categories, cart_count, subcategories=subcategories)
 
     rows = []
     for line in lines:
@@ -252,10 +284,11 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
   <a href="/checkout" class="btn">Checkout</a>
 </div>
 """
-    return layout("Your Cart", body, categories, cart_count)
+    return layout("Your Cart", body, categories, cart_count, subcategories=subcategories)
 
 
-def checkout_page(lines: list, subtotal: float, categories: list, cart_count: int = 0, error: str | None = None) -> str:
+def checkout_page(lines: list, subtotal: float, categories: list, cart_count: int = 0, error: str | None = None,
+                   subcategories: dict | None = None) -> str:
     summary_rows = "".join(
         f"""<div class="summary-line">
               <span>{escape(l['name'])} ({escape(l['size'])}{", " + escape(l['color']) if l['color'] else ""}) × {l['qty']}</span>
@@ -307,10 +340,10 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
   </form>
 </div>
 """
-    return layout("Checkout", body, categories, cart_count, section_class="checkout")
+    return layout("Checkout", body, categories, cart_count, section_class="checkout", subcategories=subcategories)
 
 
-def success_page(order: dict, categories: list) -> str:
+def success_page(order: dict, categories: list, subcategories: dict | None = None) -> str:
     # Fire pixel "Purchase"/"CompletePayment" events here once pixels are
     # uncommented above — see PIXEL_SNIPPET comment for how.
     body = f"""
@@ -326,4 +359,4 @@ def success_page(order: dict, categories: list) -> str:
   </div>
 </div>
 """
-    return layout("Order confirmed", body, categories, 0, section_class="success")
+    return layout("Order confirmed", body, categories, 0, section_class="success", subcategories=subcategories)
