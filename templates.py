@@ -116,7 +116,11 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
 </section>
 """
     return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories)
-
+SHOP_CSS = """
+<style>
+.card img{width:100%;height:auto;aspect-ratio:4/5;object-fit:contain;background:rgba(128,128,128,.10);}
+</style>
+"""
 
 def shop_page(products: list, categories: list, active_category: str | None, cart_count: int = 0,
               subcategories: dict | None = None, active_subcategory: str | None = None) -> str:
@@ -160,15 +164,130 @@ def shop_page(products: list, categories: list, active_category: str | None, car
         grid = '<div class="empty">No products in this category yet.</div>'
 
     body = f"""
+{SHOP_CSS}
 <nav class="chips">{''.join(chips)}</nav>
 {sub_chips_html}
 {grid}
 """
     return layout("Shop", body, categories, cart_count, active_category=active_category,
                   subcategories=subcategories, active_subcategory=active_subcategory)
+GALLERY_CSS = """
+<style>
+.pg{max-width:340px;margin:0 auto;padding:12px 16px 0;}
+.pg-group{display:none;}
+.pg-group.active{display:block;}
+.pg-view{position:relative;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:rgba(128,128,128,.12);}
+.pg-view img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;}
+.pg-view img.active{display:block;}
+.pg-arrow{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;font-size:22px;line-height:1;cursor:pointer;z-index:2;}
+.pg-prev{left:8px;}
+.pg-next{right:8px;}
+.pg-dots{display:flex;justify-content:center;gap:8px;margin-top:10px;}
+.pg-dot{width:9px;height:9px;border-radius:5px;border:0;padding:0;background:rgba(128,128,128,.55);cursor:pointer;transition:width .2s;}
+.pg-dot.active{width:22px;background:var(--gold,#c9a24a);}
+</style>
+"""
 
+GALLERY_JS = """
+<script>
+function pgShowColor(ci){
+  document.querySelectorAll('.pg-group').forEach(function(g){
+    g.classList.toggle('active', g.dataset.ci == ci);
+  });
+}
+function pgSet(ci, idx){
+  var g = document.querySelector('.pg-group[data-ci="' + ci + '"]');
+  var imgs = g.querySelectorAll('.pg-view img');
+  var dots = g.querySelectorAll('.pg-dot');
+  imgs.forEach(function(im, i){ im.classList.toggle('active', i === idx); });
+  dots.forEach(function(d, i){ d.classList.toggle('active', i === idx); });
+}
+function pgStep(ci, delta){
+  var g = document.querySelector('.pg-group[data-ci="' + ci + '"]');
+  var imgs = g.querySelectorAll('.pg-view img');
+  var cur = 0;
+  imgs.forEach(function(im, i){ if (im.classList.contains('active')) cur = i; });
+  pgSet(ci, (cur + delta + imgs.length) % imgs.length);
+}
+</script>
+"""
 
 def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+    size_pills = "".join(
+        f'<label class="pill"><input type="radio" name="size" value="{escape(s)}"'
+        f'{" checked" if i == 0 else ""}>{escape(s)}</label>'
+        for i, s in enumerate(p["sizes"])
+    )
+
+    # color_images format: {"Black": ["url1", "url2"], "Olive": ["url3"]}
+    color_images = p.get("color_images") or {}
+    colors = p.get("colors") or []
+
+    if color_images:
+        groups = []
+        for ci, c in enumerate(colors):
+            urls = color_images.get(c) or [p.get("image_url") or ""]
+            imgs = "".join(
+                f'<img src="{escape(u)}" alt="{escape(p["name"])} in {escape(c)}"'
+                f'{" class=active" if n == 0 else ""}>'
+                for n, u in enumerate(urls)
+            )
+            if len(urls) > 1:
+                arrows = (
+                    f'<button type="button" class="pg-arrow pg-prev" onclick="pgStep({ci},-1)" aria-label="Previous photo">&#8249;</button>'
+                    f'<button type="button" class="pg-arrow pg-next" onclick="pgStep({ci},1)" aria-label="Next photo">&#8250;</button>'
+                )
+                dots = '<div class="pg-dots">' + "".join(
+                    f'<button type="button" class="pg-dot{" active" if n == 0 else ""}" '
+                    f'onclick="pgSet({ci},{n})" aria-label="Photo {n + 1}"></button>'
+                    for n in range(len(urls))
+                ) + "</div>"
+            else:
+                arrows, dots = "", ""
+            groups.append(
+                f'<div class="pg-group{" active" if ci == 0 else ""}" data-ci="{ci}">'
+                f'<div class="pg-view">{imgs}{arrows}</div>{dots}</div>'
+            )
+        image_block = f'{GALLERY_CSS}<div class="pg">{"".join(groups)}</div>{GALLERY_JS}'
+        color_pills = "".join(
+            f'<label class="pill"><input type="radio" name="color" value="{escape(c)}"'
+            f'{" checked" if i == 0 else ""} onchange="pgShowColor({i})">{escape(c)}</label>'
+            for i, c in enumerate(colors)
+        )
+    else:
+        image_block = f'<div class="pd-image"><img src="{escape(p.get("image_url") or "")}" alt="{escape(p["name"])}"></div>'
+        color_pills = "".join(
+            f'<label class="pill"><input type="radio" name="color" value="{escape(c)}"'
+            f'{" checked" if i == 0 else ""}>{escape(c)}</label>'
+            for i, c in enumerate(colors)
+        )
+
+    body = f"""
+{image_block}
+<div class="pd-body">
+  <h1 class="pd-name display">{escape(p['name'])}</h1>
+  <p class="pd-price">{p['price']:.0f} EGP</p>
+  <p class="pd-desc">{escape(p.get('description') or '')}</p>
+
+  <form action="/cart/add" method="post">
+    <input type="hidden" name="product" value="{escape(p['slug'])}">
+
+    <span class="field-label">Size</span>
+    <div class="pill-row">{size_pills}</div>
+
+    {"<span class='field-label'>Color</span><div class='pill-row'>" + color_pills + "</div>" if color_pills else ""}
+
+    <span class="field-label">Quantity</span>
+    <div class="qty-row">
+      <input type="number" name="qty" value="1" min="1" max="10">
+    </div>
+
+    <button class="btn" type="submit">Add to Cart</button>
+  </form>
+</div>
+"""
+    return layout(p["name"], body, categories, cart_count, subcategories=subcategories)
     size_pills = "".join(
         f'<label class="pill"><input type="radio" name="size" value="{escape(s)}"'
         f'{" checked" if i == 0 else ""}>{escape(s)}</label>'
