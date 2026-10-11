@@ -84,9 +84,13 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 
 <header class="topbar">
   <div class="topbar-inner">
-    <label for="menu-toggle" class="hamburger-btn" aria-label="Open menu">
-      <span></span><span></span><span></span>
-    </label>
+    <div class="topbar-left">
+      <button type="button" class="back-btn" aria-label="Go back"
+        onclick="window.history.length > 1 ? window.history.back() : window.location.href = '/'">&larr;</button>
+      <label for="menu-toggle" class="hamburger-btn" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </label>
+    </div>
     <a href="/" class="logo">LOOM<span>EX</span></a>
     <a href="/cart" class="cart-link">
       Cart{cart_badge}
