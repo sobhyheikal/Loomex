@@ -126,8 +126,40 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories)
 SHOP_CSS = """
 <style>
-.card img{width:100%;height:auto;aspect-ratio:4/5;object-fit:contain;background:rgba(128,128,128,.10);}
+.card{position:relative;}
+.card img{width:100%;height:auto;aspect-ratio:4/5;object-fit:contain;background:rgba(128,128,128,.10);display:none;}
+.card img.active{display:block;}
+.card-group{display:none;position:relative;}
+.card-group.active{display:block;}
+.card-arrow{position:absolute;top:50%;transform:translateY(-50%);width:26px;height:26px;border:0;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;font-size:16px;line-height:1;cursor:pointer;z-index:2;display:flex;
+  align-items:center;justify-content:center;padding:0;}
+.card-prev{left:6px;}
+.card-next{right:6px;}
+.card-swatches{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.swatch{width:16px;height:16px;border-radius:50%;border:2px solid transparent;background-size:cover;
+  background-position:center;cursor:pointer;padding:0;}
+.swatch.active{border-color:var(--gold,#c9a24a);}
 </style>
+<script>
+function cardShowColor(el, ci){
+  var card = el.closest('.card');
+  card.querySelectorAll('.card-group').forEach(function(g){
+    g.classList.toggle('active', g.dataset.ci == ci);
+  });
+  card.querySelectorAll('.swatch').forEach(function(s, i){
+    s.classList.toggle('active', i === ci);
+  });
+}
+function cardStep(el, delta){
+  var group = el.closest('.card-group');
+  var imgs = group.querySelectorAll('img');
+  var cur = 0;
+  imgs.forEach(function(im, i){ if (im.classList.contains('active')) cur = i; });
+  var next = (cur + delta + imgs.length) % imgs.length;
+  imgs.forEach(function(im, i){ im.classList.toggle('active', i === next); });
+}
+</script>
 """
 
 def shop_page(products: list, categories: list, active_category: str | None, cart_count: int = 0,
@@ -158,17 +190,62 @@ def shop_page(products: list, categories: list, active_category: str | None, car
         sub_chips_html = f'<nav class="subtabs">{"".join(sub_tabs)}</nav>'
 
     if products:
-        cards = "".join(
-            f"""<a href="/product/{escape(p['slug'])}" class="card">
-                  <img src="{escape(p.get('image_url') or '')}" alt="{escape(p['name'])}" loading="lazy">
-                  <div class="card-body">
-                    <p class="card-name">{escape(p['name'])}</p>
-                    <p class="card-price">{p['price']:.0f} EGP</p>
-                  </div>
-                </a>"""
-            for p in products
-        )
-        grid = f'<div class="grid">{cards}</div>'
+        card_blocks = []
+        for p in products:
+            color_images = p.get("color_images") or {}
+            colors = p.get("colors") or []
+            fallback_img = p.get("image_url") or ""
+
+            if color_images:
+                groups = []
+                swatches = []
+                for ci, c in enumerate(colors):
+                    urls = color_images.get(c) or [fallback_img]
+                    imgs = "".join(
+                        f'<img src="{escape(u)}" alt="{escape(p["name"])} in {escape(c)}" loading="lazy"'
+                        f'{" class=active" if n == 0 else ""}>'
+                        for n, u in enumerate(urls)
+                    )
+                    if len(urls) > 1:
+                        arrows = (
+                            f'<button type="button" class="card-arrow card-prev" '
+                            f'onclick="event.preventDefault();event.stopPropagation();cardStep(this,-1);" '
+                            f'aria-label="Previous photo">&#8249;</button>'
+                            f'<button type="button" class="card-arrow card-next" '
+                            f'onclick="event.preventDefault();event.stopPropagation();cardStep(this,1);" '
+                            f'aria-label="Next photo">&#8250;</button>'
+                        )
+                    else:
+                        arrows = ""
+                    groups.append(
+                        f'<div class="card-group{" active" if ci == 0 else ""}" data-ci="{ci}">{imgs}{arrows}</div>'
+                    )
+                    swatches.append(
+                        f'<button type="button" class="swatch{" active" if ci == 0 else ""}" '
+                        f"style=\"background-image:url('{escape(urls[0])}')\" "
+                        f'onclick="event.preventDefault();event.stopPropagation();cardShowColor(this,{ci});" '
+                        f'aria-label="{escape(c)}" title="{escape(c)}"></button>'
+                    )
+                media = f'<div class="card-media">{"".join(groups)}</div>'
+                swatch_row = f'<div class="card-swatches">{"".join(swatches)}</div>'
+            else:
+                media = (
+                    f'<div class="card-media"><img src="{escape(fallback_img)}" '
+                    f'alt="{escape(p["name"])}" class="active" loading="lazy"></div>'
+                )
+                swatch_row = ""
+
+            card_blocks.append(
+                f"""<a href="/product/{escape(p['slug'])}" class="card">
+                      {media}
+                      <div class="card-body">
+                        <p class="card-name">{escape(p['name'])}</p>
+                        <p class="card-price">{p['price']:.0f} EGP</p>
+                        {swatch_row}
+                      </div>
+                    </a>"""
+            )
+        grid = f'<div class="grid">{"".join(card_blocks)}</div>'
     else:
         grid = '<div class="empty">No products in this category yet.</div>'
 

@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "loomex",
+      "url": "http://127.0.0.1:8008",
+      "port": 8008
+    }
+  ]
+}
