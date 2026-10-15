@@ -3,6 +3,7 @@ HTML is built with small Python functions instead of separate .html files
 (see comment history / README for why — keeps Vercel bundling simple).
 """
 
+from datetime import datetime
 from html import escape
 
 FONTS = (
@@ -494,20 +495,164 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
     return layout("Checkout", body, categories, cart_count, section_class="checkout", subcategories=subcategories)
 
 
+PAYMENT_LABELS = {"cod": "Cash on Delivery", "online": "Online Payment"}
+
+RECEIPT_CSS = """
+<style>
+.success .wrap { padding: 46px 18px 60px; text-align: center; }
+.success-check {
+  width: 44px; height: 44px; margin: 0 auto 16px; border-radius: 50%;
+  background: var(--teal); color: #fff; font-size: 20px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.success-title { font-size: 26px; margin: 0 0 6px; color: var(--paper); }
+.success-sub { color: var(--paper-dim); font-size: 13.5px; margin: 0 0 30px; }
+
+.receipt {
+  background: #fff;
+  border: 1px solid var(--stone-line);
+  box-shadow: 0 10px 30px rgba(32, 28, 24, 0.08);
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 26px 22px;
+  text-align: left;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--ink-on-stone);
+  font-size: 12px;
+}
+.receipt-brand {
+  text-align: center;
+  font-family: "Big Shoulders Display", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 22px;
+  color: var(--ink-on-stone);
+}
+.receipt-tagline { text-align: center; color: var(--ink-dim-on-stone); font-size: 10.5px; margin: 4px 0 18px; }
+.receipt-rule { border: none; border-top: 1px dashed var(--stone-line); margin: 16px 0; }
+.receipt-meta-row { display: flex; justify-content: space-between; padding: 2px 0; letter-spacing: 0.04em; }
+.receipt-meta-row span:first-child { color: var(--ink-dim-on-stone); }
+.receipt-meta-row strong { font-weight: 700; }
+.receipt-section-label {
+  font-weight: 700; letter-spacing: 0.08em; font-size: 11px; margin-bottom: 8px;
+}
+.receipt-customer p { margin: 0 0 3px; }
+.receipt-items-head {
+  display: grid; grid-template-columns: 1fr 34px 64px; gap: 6px;
+  text-transform: uppercase; letter-spacing: 0.06em; font-size: 10.5px;
+  color: var(--ink-dim-on-stone); padding-bottom: 6px;
+}
+.receipt-item { padding: 9px 0; border-bottom: 1px dashed var(--stone-line); }
+.receipt-item:last-child { border-bottom: none; }
+.receipt-item-top { display: grid; grid-template-columns: 1fr 34px 64px; gap: 6px; font-weight: 700; }
+.receipt-item-top span:nth-child(2) { text-align: center; font-weight: 400; }
+.receipt-item-top span:nth-child(3) { text-align: right; }
+.receipt-item-variant, .receipt-item-unit {
+  font-size: 10.5px; color: var(--ink-dim-on-stone); margin-top: 2px;
+}
+.receipt-totals { margin-top: 2px; }
+.receipt-total-row { display: flex; justify-content: space-between; padding: 4px 0; }
+.receipt-total-main {
+  border-top: 1px solid var(--ink-on-stone); margin-top: 6px; padding-top: 10px;
+  font-weight: 700; font-size: 14px;
+}
+.receipt-payment-box {
+  margin-top: 16px; padding: 12px; text-align: center;
+  border: 1px solid var(--stone-line);
+}
+.receipt-payment-label { font-size: 10px; letter-spacing: 0.08em; color: var(--ink-dim-on-stone); margin: 0 0 3px; }
+.receipt-payment-value { font-weight: 700; margin: 0; }
+.receipt-thanks { text-align: center; }
+.receipt-thanks p { margin: 0 0 4px; }
+.receipt-thanks-note { color: var(--ink-dim-on-stone); font-size: 10.5px; }
+.receipt-brand-small {
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700;
+  letter-spacing: 0.08em; font-size: 12px; margin-top: 8px !important;
+}
+</style>
+"""
+
+
 def success_page(order: dict, categories: list, subcategories: dict | None = None) -> str:
     # Fire pixel "Purchase"/"CompletePayment" events here once pixels are
     # uncommented above — see PIXEL_SNIPPET comment for how.
+    items = order.get("items") or []
+    subtotal = sum(float(i["unit_price"]) * int(i["quantity"]) for i in items) or float(order.get("total") or 0)
+    total = float(order.get("total") or subtotal)
+    payment_label = PAYMENT_LABELS.get(order.get("payment_method"), "Cash on Delivery")
+
+    created_at = order.get("created_at") or ""
+    try:
+        dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        date_str = dt.strftime("%d/%m/%Y")
+        time_str = dt.strftime("%I:%M %p")
+    except ValueError:
+        date_str, time_str = "", ""
+
+    item_rows = "".join(
+        f"""<div class="receipt-item">
+              <div class="receipt-item-top">
+                <span>{escape(i['product_name'])}</span>
+                <span>{int(i['quantity'])}</span>
+                <span>{float(i['unit_price']) * int(i['quantity']):.0f} EGP</span>
+              </div>
+              {f'<div class="receipt-item-variant">{escape(" / ".join(filter(None, [i.get("size"), i.get("color")])))}</div>' if i.get("size") or i.get("color") else ""}
+              <div class="receipt-item-unit">{float(i['unit_price']):.0f} EGP x {int(i['quantity'])}</div>
+            </div>"""
+        for i in items
+    )
+
+    customer_lines = "".join(
+        f"<p>{escape(v)}</p>" for v in [order.get("customer_name"), order.get("phone"),
+                                         order.get("address"), order.get("city")] if v
+    )
+
     body = f"""
+{RECEIPT_CSS}
 <div class="wrap">
-  <div style="text-align:center;">
-    <p class="eyebrow" style="color:var(--gold);">Order confirmed</p>
-    <p class="order-no">{escape(order['order_number'])}</p>
-    <p style="color:var(--paper-dim);font-size:14px;">
-      Thanks, {escape(order['customer_name'])} — we've got your order.
-      We'll call to confirm delivery details and cost before it ships.
-    </p>
-    <a href="/shop" class="btn btn-outline" style="margin-top:26px;max-width:220px;margin-left:auto;margin-right:auto;">Back to shop</a>
+  <div class="success-check">&#10003;</div>
+  <h1 class="success-title display">Order Confirmed</h1>
+  <p class="success-sub">Thank you for shopping with Loomex.</p>
+
+  <div class="receipt">
+    <div class="receipt-brand">LOOMEX</div>
+    <p class="receipt-tagline">Homewear, woven for rest</p>
+
+    <div class="receipt-meta-row"><span>ORDER</span><strong>{escape(order['order_number'])}</strong></div>
+    <div class="receipt-meta-row"><span>DATE</span><strong>{escape(date_str)}</strong></div>
+    <div class="receipt-meta-row"><span>TIME</span><strong>{escape(time_str)}</strong></div>
+    <div class="receipt-meta-row"><span>PAYMENT</span><strong>{escape(payment_label.upper())}</strong></div>
+
+    <hr class="receipt-rule">
+
+    <div class="receipt-section-label">CUSTOMER</div>
+    <div class="receipt-customer">{customer_lines}</div>
+
+    <hr class="receipt-rule">
+
+    <div class="receipt-items-head"><span>ITEM</span><span>QTY</span><span>AMOUNT</span></div>
+    {item_rows}
+
+    <div class="receipt-totals">
+      <div class="receipt-total-row"><span>SUBTOTAL</span><span>{subtotal:.0f} EGP</span></div>
+      <div class="receipt-total-row receipt-total-main"><span>TOTAL</span><span>{total:.0f} EGP</span></div>
+    </div>
+
+    <div class="receipt-payment-box">
+      <p class="receipt-payment-label">PAYMENT METHOD</p>
+      <p class="receipt-payment-value">{escape(payment_label.upper())}</p>
+    </div>
+
+    <hr class="receipt-rule">
+
+    <div class="receipt-thanks">
+      <p><strong>THANK YOU!</strong></p>
+      <p class="receipt-thanks-note">Thank you for choosing Loomex.<br>Your order will be prepared with care.</p>
+      <p class="receipt-brand-small">LOOMEX</p>
+    </div>
   </div>
+
+  <a href="/shop" class="btn" style="margin-top:26px;max-width:260px;margin-left:auto;margin-right:auto;">Continue Shopping</a>
 </div>
 """
     return layout("Order confirmed", body, categories, 0, section_class="success", subcategories=subcategories)

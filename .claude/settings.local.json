@@ -9,7 +9,10 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/product/tank-top)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/)",
       "Bash(curl -s http://127.0.0.1:8000/)",
-      "Bash(curl -s http://127.0.0.1:8000/static/style.css)"
+      "Bash(curl -s http://127.0.0.1:8000/static/style.css)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/order/LMX-0C33B4A4)",
+      "Bash(pkill -f \"uvicorn main:app --port 8008\" 2>/dev/null; sleep 1; .venv/bin/uvicorn main:app --port 8008 > /tmp/loomex_uvicorn.log 2>&1 & *)",
+      "Bash(curl -s -o /dev/null -w \"checkout:%{http_code}\\\\n\" http://127.0.0.1:8008/checkout -b \"cart=\")"
     ]
   }
 }

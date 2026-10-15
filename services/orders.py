@@ -49,4 +49,9 @@ def create_order(customer_name: str, phone: str, city: str, address: str,
 
 def get_order_by_number(order_number: str):
     result = supabase.table("orders").select("*").eq("order_number", order_number).single().execute()
-    return result.data
+    order = result.data
+    if not order:
+        return None
+    items = supabase.table("order_items").select("*").eq("order_id", order["id"]).execute()
+    order["items"] = items.data or []
+    return order
