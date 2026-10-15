@@ -60,9 +60,15 @@ def _category_links(categories: list, subcategories: dict | None = None, active:
 
 def layout(title: str, body: str, categories: list, cart_count: int = 0,
            section_class: str = "", active_category: str | None = None,
-           subcategories: dict | None = None, active_subcategory: str | None = None) -> str:
+           subcategories: dict | None = None, active_subcategory: str | None = None,
+           show_back: bool = False) -> str:
     cat_links = _category_links(categories, subcategories, active_category, active_subcategory)
     cart_badge = f'<span class="cart-badge">{cart_count}</span>' if cart_count else ""
+    back_btn = (
+        '<button type="button" class="back-btn" aria-label="Go back"'
+        ' onclick="window.history.length > 1 ? window.history.back() : window.location.href = \'/\'">&larr;</button>'
+        if show_back else ""
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -89,18 +95,22 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 <header class="topbar">
   <div class="topbar-inner">
     <div class="topbar-left">
-      <button type="button" class="back-btn" aria-label="Go back"
-        onclick="window.history.length > 1 ? window.history.back() : window.location.href = '/'">&larr;</button>
       <label for="menu-toggle" class="hamburger-btn" aria-label="Open menu">
         <span></span><span></span><span></span>
       </label>
     </div>
     <a href="/" class="logo">LOOM<span>EX</span></a>
-    <a href="/cart" class="cart-link">
-      Cart{cart_badge}
+    <a href="/cart" class="cart-link" aria-label="Cart">
+      <svg class="cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="9" cy="21" r="1.3"></circle>
+        <circle cx="19" cy="21" r="1.3"></circle>
+        <path d="M2.5 3h2.2l2.1 12.1a2 2 0 0 0 2 1.65h8.6a2 2 0 0 0 2-1.6l1.5-7.4H6"></path>
+      </svg>{cart_badge}
     </a>
   </div>
 </header>
+{f'<div class="back-btn-wrap">{back_btn}</div>' if show_back else ""}
 {body}
 <footer class="footer">
   <div class="wrap">
@@ -373,71 +383,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
   </form>
 </div>
 """
-    return layout(p["name"], body, categories, cart_count, subcategories=subcategories)
-    size_pills = "".join(
-        f'<label class="pill"><input type="radio" name="size" value="{escape(s)}"'
-        f'{" checked" if i == 0 else ""}>{escape(s)}</label>'
-        for i, s in enumerate(p["sizes"])
-    )
-
-    # color_images format: {"Black": ["url1", "url2"], "Olive": ["url3"]}
-    # Each color can have its own set of photos, swipeable via the carousel.
-    # Tapping a color pill swaps which color's photo set is showing (plain
-    # inline JS toggling display — no page reload needed).
-    color_images = p.get("color_images") or {}
-    colors = p.get("colors") or []
-
-    if color_images:
-        groups = "".join(
-            f"""<div class="gallery-group" id="ggroup-{escape(c)}" style="display:{'block' if i == 0 else 'none'};">
-                  <div class="carousel">{"".join(
-                      f'<div class="carousel-slide"><img src="{escape(url)}" alt="{escape(p["name"])} in {escape(c)}"></div>'
-                      for url in (color_images.get(c) or [p.get("image_url") or ""])
-                  )}</div>
-                </div>"""
-            for i, c in enumerate(colors)
-        )
-        image_block = f'<div class="gallery">{groups}</div>'
-        color_pills = "".join(
-            f'<label class="pill" onclick="document.querySelectorAll(\'.gallery-group\').forEach(g=>g.style.display=\'none\');'
-            f"document.getElementById('ggroup-{escape(c)}').style.display='block';\">"
-            f'<input type="radio" name="color" value="{escape(c)}"'
-            f'{" checked" if i == 0 else ""} style="display:none;">{escape(c)}</label>'
-            for i, c in enumerate(colors)
-        )
-    else:
-        image_block = f'<div class="pd-image"><img src="{escape(p.get("image_url") or "")}" alt="{escape(p["name"])}"></div>'
-        color_pills = "".join(
-            f'<label class="pill"><input type="radio" name="color" value="{escape(c)}"'
-            f'{" checked" if i == 0 else ""}>{escape(c)}</label>'
-            for i, c in enumerate(colors)
-        )
-
-    body = f"""
-{image_block}
-<div class="pd-body">
-  <h1 class="pd-name display">{escape(p['name'])}</h1>
-  <p class="pd-price">{p['price']:.0f} EGP</p>
-  <p class="pd-desc">{escape(p.get('description') or '')}</p>
-
-  <form action="/cart/add" method="post">
-    <input type="hidden" name="product" value="{escape(p['slug'])}">
-
-    <span class="field-label">Size</span>
-    <div class="pill-row">{size_pills}</div>
-
-    {"<span class='field-label'>Color</span><div class='pill-row'>" + color_pills + "</div>" if color_pills else ""}
-
-    <span class="field-label">Quantity</span>
-    <div class="qty-row">
-      <input type="number" name="qty" value="1" min="1" max="10">
-    </div>
-
-    <button class="btn" type="submit">Add to Cart</button>
-  </form>
-</div>
-"""
-    return layout(p["name"], body, categories, cart_count, subcategories=subcategories)
+    return layout(p["name"], body, categories, cart_count, subcategories=subcategories, show_back=True)
 
 
 def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 0,
