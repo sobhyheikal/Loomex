@@ -12,7 +12,18 @@
       "Bash(curl -s http://127.0.0.1:8000/static/style.css)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/order/LMX-0C33B4A4)",
       "Bash(pkill -f \"uvicorn main:app --port 8008\" 2>/dev/null; sleep 1; .venv/bin/uvicorn main:app --port 8008 > /tmp/loomex_uvicorn.log 2>&1 & *)",
-      "Bash(curl -s -o /dev/null -w \"checkout:%{http_code}\\\\n\" http://127.0.0.1:8008/checkout -b \"cart=\")"
+      "Bash(curl -s -o /dev/null -w \"checkout:%{http_code}\\\\n\" http://127.0.0.1:8008/checkout -b \"cart=\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/about)",
+      "Bash(python3 -)",
+      "Bash(python3 -c \"import cairosvg\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/static/favicon.svg)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/static/apple-touch-icon.png)",
+      "Bash(.venv/bin/pip install *)",
+      "Read(//System/Library/Fonts/Supplemental/**)",
+      "Read(//System/Library/Fonts/**)",
+      "Bash(.venv/bin/python3 -)",
+      "Bash(.venv/bin/pip uninstall *)"
     ]
   }
 }

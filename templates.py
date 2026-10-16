@@ -3,8 +3,11 @@ HTML is built with small Python functions instead of separate .html files
 (see comment history / README for why — keeps Vercel bundling simple).
 """
 
+import json
 from datetime import datetime
 from html import escape
+
+from config import META_PIXEL_ID, SITE_URL, TIKTOK_PIXEL_ID
 
 FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
@@ -12,28 +15,63 @@ FONTS = (
     'family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
 )
 
-# ----------------------------------------------------------------------
-# AD PIXELS — paste your Meta Pixel + TikTok Pixel base code here once you
-# have them (Meta Events Manager / TikTok Events Manager -> "Set up pixel").
-# ----------------------------------------------------------------------
-PIXEL_SNIPPET = """
-<!-- Meta Pixel — replace YOUR_PIXEL_ID, then uncomment
-<script>
-!function(f,b,e,v,n,t,s){{if(f.fbq)return;n=f.fbq=function(){{n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)}};if(!f._fbq)f._fbq=n;
-n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}}(window,
-document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', 'YOUR_PIXEL_ID');
-fbq('track', 'PageView');
-</script>
--->
+DEFAULT_DESCRIPTION = (
+    "Loomex — heavyweight cotton homewear. Tops, pants, pullovers, "
+    "quarter-zips and jackets built for the hours that don't need an outfit."
+)
+# A real product photo used as the fallback social-share image for pages
+# that aren't about one specific product (home, shop, cart, legal pages...).
+DEFAULT_OG_IMAGE = (
+    "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/"
+    "product_images/Tank_Top-Front.JPG"
+)
 
-<!-- TikTok Pixel — replace YOUR_TIKTOK_PIXEL_ID, then uncomment
+# ----------------------------------------------------------------------
+# AD PIXELS — ids live in config.py (META_PIXEL_ID / TIKTOK_PIXEL_ID).
+# Leave an id blank there to keep that pixel fully disabled.
+# ----------------------------------------------------------------------
+def _meta_pixel_script(extra_events: str = "") -> str:
+    if not META_PIXEL_ID:
+        return "<!-- Meta Pixel disabled — set META_PIXEL_ID in config.py to enable -->"
+    return f"""
+<!-- Meta Pixel Code -->
 <script>
-!function (w, d, t) {{ w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){{t[e]=function(){{t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.load=function(e,n){{var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{{}},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{{}},ttq._t[e]=+new Date,ttq._o=ttq._o||{{}},ttq._o[e]=n||{{}};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)}};ttq.load('YOUR_TIKTOK_PIXEL_ID');ttq.page();}}(window, document, 'ttq');
+!function(f,b,e,v,n,t,s)
+{{if(f.fbq)return;n=f.fbq=function(){{n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)}};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '{META_PIXEL_ID}');
+fbq('track', 'PageView');
+{extra_events}
 </script>
--->
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id={META_PIXEL_ID}&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+"""
+
+
+def _tiktok_pixel_script(extra_events: str = "") -> str:
+    if not TIKTOK_PIXEL_ID:
+        return "<!-- TikTok Pixel disabled — set TIKTOK_PIXEL_ID in config.py to enable -->"
+    return f"""
+<!-- TikTok Pixel Code Start -->
+<script>
+!function (w, d, t) {{
+  w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){{t[e]=function(){{t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){{for(
+var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e}},ttq.load=function(e,n){{var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{{}},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{{}},ttq._t[e]=+new Date,ttq._o=ttq._o||{{}},ttq._o[e]=n||{{}};n=document.createElement("script")
+;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)}};
+
+  ttq.load('{TIKTOK_PIXEL_ID}');
+  ttq.page();
+  {extra_events}
+}}(window, document, 'ttq');
+</script>
+<!-- TikTok Pixel Code End -->
 """
 
 
@@ -62,7 +100,9 @@ def _category_links(categories: list, subcategories: dict | None = None, active:
 def layout(title: str, body: str, categories: list, cart_count: int = 0,
            section_class: str = "", active_category: str | None = None,
            subcategories: dict | None = None, active_subcategory: str | None = None,
-           show_back: bool = False) -> str:
+           show_back: bool = False, description: str | None = None,
+           image: str | None = None, path: str = "",
+           meta_pixel_events: str = "", tiktok_pixel_events: str = "") -> str:
     cat_links = _category_links(categories, subcategories, active_category, active_subcategory)
     cart_badge = f'<span class="cart-badge">{cart_count}</span>' if cart_count else ""
     back_btn = (
@@ -71,15 +111,34 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
         if show_back else ""
     )
 
+    page_title = f"{title} · Loomex"
+    description = description or DEFAULT_DESCRIPTION
+    image = image or DEFAULT_OG_IMAGE
+    og_url_tag = f'<meta property="og:url" content="{escape(SITE_URL + path)}">' if SITE_URL else ""
+    pixel_snippet = _meta_pixel_script(meta_pixel_events) + _tiktok_pixel_script(tiktok_pixel_events)
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{escape(title)} · Loomex</title>
+<title>{escape(page_title)}</title>
+<meta name="description" content="{escape(description)}">
+<meta property="og:site_name" content="Loomex">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{escape(page_title)}">
+<meta property="og:description" content="{escape(description)}">
+<meta property="og:image" content="{escape(image)}">
+{og_url_tag}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{escape(page_title)}">
+<meta name="twitter:description" content="{escape(description)}">
+<meta name="twitter:image" content="{escape(image)}">
 {FONTS}
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="stylesheet" href="/static/style.css">
-{PIXEL_SNIPPET}
+{pixel_snippet}
 </head>
 <body class="{section_class}">
 <input type="checkbox" id="menu-toggle" class="menu-toggle-input">
@@ -115,6 +174,12 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 {body}
 <footer class="footer">
   <div class="wrap">
+    <nav class="footer-links">
+      <a href="/about">About &amp; Contact</a>
+      <a href="/returns">Returns &amp; Exchanges</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy-policy">Privacy Policy</a>
+    </nav>
     <p>LOOMEX — HOMEWEAR, WOVEN FOR REST</p>
   </div>
 </footer>
@@ -134,7 +199,7 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
   </div>
 </section>
 """
-    return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories)
+    return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories, path="/")
 SHOP_CSS = """
 <style>
 .card{position:relative;}
@@ -266,8 +331,14 @@ def shop_page(products: list, categories: list, active_category: str | None, car
 {sub_chips_html}
 {grid}
 """
-    return layout("Shop", body, categories, cart_count, active_category=active_category,
-                  subcategories=subcategories, active_subcategory=active_subcategory)
+    shop_title = active_category.replace("-", " ").title() if active_category else "Shop All"
+    shop_description = (
+        f"Shop {shop_title} at Loomex — heavyweight cotton homewear made for comfort."
+        if active_category else DEFAULT_DESCRIPTION
+    )
+    return layout(shop_title, body, categories, cart_count, active_category=active_category,
+                  subcategories=subcategories, active_subcategory=active_subcategory,
+                  description=shop_description, path="/shop")
 GALLERY_CSS = """
 <style>
 .pg{max-width:340px;margin:0 auto;padding:12px 16px 0;}
@@ -360,6 +431,14 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
             for i, c in enumerate(colors)
         )
 
+    add_to_cart_js = (
+        f"if(window.fbq){{fbq('track','AddToCart',{{content_ids:['{p['slug']}'],content_type:'product',"
+        f"value:{p['price']:.2f}*(this.qty.value||1),currency:'EGP'}});}}"
+        f"if(window.ttq){{ttq.track('AddToCart',{{content_id:'{p['slug']}',content_type:'product',"
+        f"quantity:Number(this.qty.value||1),price:{p['price']:.2f},"
+        f"value:{p['price']:.2f}*(this.qty.value||1),currency:'EGP'}});}}"
+    )
+
     body = f"""
 {image_block}
 <div class="pd-body">
@@ -367,7 +446,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
   <p class="pd-price">{p['price']:.0f} EGP</p>
   <p class="pd-desc">{escape(p.get('description') or '')}</p>
 
-  <form action="/cart/add" method="post">
+  <form action="/cart/add" method="post" onsubmit="{add_to_cart_js}">
     <input type="hidden" name="product" value="{escape(p['slug'])}">
 
     <span class="field-label">Size</span>
@@ -384,7 +463,18 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
   </form>
 </div>
 """
-    return layout(p["name"], body, categories, cart_count, subcategories=subcategories, show_back=True)
+    product_description = p.get("description") or f"{p['name']} — {p['price']:.0f} EGP at Loomex."
+    meta_view_content = (
+        f"fbq('track', 'ViewContent', {{content_ids: ['{p['slug']}'], content_type: 'product', "
+        f"value: {p['price']:.2f}, currency: 'EGP'}});"
+    )
+    tiktok_view_content = (
+        f"ttq.track('ViewContent', {{content_id: '{p['slug']}', content_type: 'product', "
+        f"value: {p['price']:.2f}, currency: 'EGP'}});"
+    )
+    return layout(p["name"], body, categories, cart_count, subcategories=subcategories, show_back=True,
+                  description=product_description, image=p.get("image_url"), path=f"/product/{p['slug']}",
+                  meta_pixel_events=meta_view_content, tiktok_pixel_events=tiktok_view_content)
 
 
 def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 0,
@@ -397,7 +487,7 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
   <a href="/shop" class="btn">Continue Shopping</a>
 </div>
 """
-        return layout("Your Cart", body, categories, cart_count, subcategories=subcategories)
+        return layout("Your Cart", body, categories, cart_count, subcategories=subcategories, path="/cart")
 
     rows = []
     for line in lines:
@@ -436,7 +526,7 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
   <a href="/checkout" class="btn">Checkout</a>
 </div>
 """
-    return layout("Your Cart", body, categories, cart_count, subcategories=subcategories)
+    return layout("Your Cart", body, categories, cart_count, subcategories=subcategories, path="/cart")
 
 
 def checkout_page(lines: list, subtotal: float, categories: list, cart_count: int = 0, error: str | None = None,
@@ -492,7 +582,7 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
   </form>
 </div>
 """
-    return layout("Checkout", body, categories, cart_count, section_class="checkout", subcategories=subcategories)
+    return layout("Checkout", body, categories, cart_count, section_class="checkout", subcategories=subcategories, path="/checkout")
 
 
 PAYMENT_LABELS = {"cod": "Cash on Delivery", "online": "Online Payment"}
@@ -574,8 +664,6 @@ RECEIPT_CSS = """
 
 
 def success_page(order: dict, categories: list, subcategories: dict | None = None) -> str:
-    # Fire pixel "Purchase"/"CompletePayment" events here once pixels are
-    # uncommented above — see PIXEL_SNIPPET comment for how.
     items = order.get("items") or []
     subtotal = sum(float(i["unit_price"]) * int(i["quantity"]) for i in items) or float(order.get("total") or 0)
     total = float(order.get("total") or subtotal)
@@ -655,4 +743,215 @@ def success_page(order: dict, categories: list, subcategories: dict | None = Non
   <a href="/shop" class="btn" style="margin-top:26px;max-width:260px;margin-left:auto;margin-right:auto;">Continue Shopping</a>
 </div>
 """
-    return layout("Order confirmed", body, categories, 0, section_class="success", subcategories=subcategories)
+    # Each guarded with its own localStorage key so reloading/revisiting
+    # this confirmation page (e.g. the customer bookmarks it, or refreshes)
+    # doesn't fire a duplicate Purchase/CompletePayment and inflate ad
+    # reporting. Separate keys per platform so one firing doesn't suppress
+    # the other on the same visit.
+    order_number_js = json.dumps(order["order_number"])
+    content_ids_js = json.dumps([i["product_name"] for i in items])
+    meta_purchase_event = (
+        "(function(){try{"
+        "var k='loomex_purchase_tracked_meta';"
+        "var tracked=JSON.parse(localStorage.getItem(k)||'[]');"
+        f"if(tracked.indexOf({order_number_js})===-1){{"
+        f"fbq('track','Purchase',{{value:{total:.2f},currency:'EGP',"
+        f"content_ids:{content_ids_js},content_type:'product',num_items:{len(items)}}});"
+        f"tracked.push({order_number_js});"
+        "localStorage.setItem(k,JSON.stringify(tracked));"
+        "}}catch(e){}})();"
+    )
+    tiktok_purchase_event = (
+        "(function(){try{"
+        "var k='loomex_purchase_tracked_tiktok';"
+        "var tracked=JSON.parse(localStorage.getItem(k)||'[]');"
+        f"if(tracked.indexOf({order_number_js})===-1){{"
+        f"ttq.track('CompletePayment',{{value:{total:.2f},currency:'EGP',"
+        f"contents:{content_ids_js}.map(function(n){{return {{content_id:n,content_type:'product'}};}})}});"
+        f"tracked.push({order_number_js});"
+        "localStorage.setItem(k,JSON.stringify(tracked));"
+        "}}catch(e){}})();"
+    )
+    return layout("Order confirmed", body, categories, 0, section_class="success", subcategories=subcategories,
+                  description="Your Loomex order is confirmed.", meta_pixel_events=meta_purchase_event,
+                  tiktok_pixel_events=tiktok_purchase_event)
+
+
+# ----------------------------------------------------------------------
+# LEGAL / TRUST PAGES — About, Privacy, Terms, Returns.
+# ----------------------------------------------------------------------
+LEGAL_UPDATED = "October 2026"
+
+LEGAL_CSS = """
+<style>
+.legal .wrap { padding: 30px 18px 60px; max-width: 620px; }
+.legal .wrap h1 { font-size: 28px; margin: 0 0 6px; color: var(--paper); }
+.legal-updated { color: var(--paper-dim); font-size: 12px; margin-bottom: 28px; }
+.legal .wrap h2 { font-size: 15px; color: var(--gold); margin: 28px 0 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.legal .wrap p { color: var(--paper-dim); font-size: 14px; line-height: 1.7; margin: 0 0 14px; }
+.legal .wrap ul { color: var(--paper-dim); font-size: 14px; line-height: 1.7; margin: 0 0 14px; padding-left: 20px; }
+.legal .wrap li { margin-bottom: 6px; }
+.legal .wrap a { color: var(--gold); text-decoration: underline; }
+.legal-contact-block { background: var(--ink-raised); border: 1px solid var(--line); padding: 18px; margin: 10px 0 20px; }
+.legal-contact-block p { margin: 0 0 10px; color: var(--paper); }
+.legal-contact-block p:last-child { margin-bottom: 0; }
+.legal-contact-block .label {
+  color: var(--paper-dim); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.08em; display: block; margin-bottom: 2px;
+}
+</style>
+"""
+
+
+def legal_page(title: str, body: str, categories: list, cart_count: int = 0,
+                subcategories: dict | None = None, description: str | None = None,
+                path: str = "") -> str:
+    full = f"""
+{LEGAL_CSS}
+<div class="wrap">
+  <h1 class="display">{escape(title)}</h1>
+  <p class="legal-updated">Last updated {LEGAL_UPDATED}</p>
+  {body}
+</div>
+"""
+    return layout(title, full, categories, cart_count, section_class="legal", subcategories=subcategories,
+                  description=description, path=path)
+
+
+def about_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+    body = """
+<p>Loomex makes heavyweight cotton homewear — tops, pants, pullovers,
+quarter-zips and jackets built for the hours that don't need an outfit.</p>
+
+<h2>Get in touch</h2>
+<p>Questions about an order, sizing, or anything else — reach us any time:</p>
+<div class="legal-contact-block">
+  <p><span class="label">Email</span><a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a></p>
+  <p><span class="label">Phone / WhatsApp</span><a href="tel:+201130704895">01130704895</a></p>
+</div>
+<p>We currently ship within Egypt and accept Cash on Delivery only.
+Delivery cost and timing are confirmed by phone after you place an order.</p>
+"""
+    return legal_page("About & Contact", body, categories, cart_count, subcategories=subcategories,
+                      description="Get in touch with Loomex — questions about an order, sizing, or anything else.",
+                      path="/about")
+
+
+def returns_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+    body = """
+<p>We want you to be happy with your order. If something isn't right,
+here's how returns and exchanges work.</p>
+
+<h2>Return window</h2>
+<p>You have <strong>7 days from the date your order is delivered</strong> to
+request a return or exchange.</p>
+
+<h2>Condition</h2>
+<ul>
+  <li>Items must be unworn, unwashed, and in their original condition.</li>
+  <li>Tags (if any) must still be attached.</li>
+</ul>
+
+<h2>Return shipping</h2>
+<p>Return shipping is paid by the customer. We recommend a trackable courier —
+we can't issue a refund or exchange for an item that doesn't reach us.</p>
+
+<h2>Refunds</h2>
+<p>Since we currently accept Cash on Delivery only, refunds are issued as
+store credit, or by bank/wallet transfer if you'd prefer — just let us know
+when you reach out.</p>
+
+<h2>How to start a return</h2>
+<p>Email <a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a> or message
+us at <a href="tel:+201130704895">01130704895</a> with your order number and the
+reason for the return, and we'll walk you through the next steps.</p>
+"""
+    return legal_page("Returns & Exchanges", body, categories, cart_count, subcategories=subcategories,
+                      description="Loomex returns and exchanges policy — 7-day return window, how refunds work.",
+                      path="/returns")
+
+
+def terms_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+    body = """
+<p>These terms apply to any order placed through the Loomex website. By
+placing an order, you agree to them.</p>
+
+<h2>Products &amp; pricing</h2>
+<p>All prices are listed in Egyptian Pounds (EGP). We try to keep product
+photos, descriptions, and sizing accurate, but occasional errors can happen —
+if a listed price or description is wrong, we'll contact you before
+processing the order.</p>
+
+<h2>Orders &amp; payment</h2>
+<p>We currently accept Cash on Delivery only. Placing an order is a request
+to buy, not a guaranteed sale — we may decline or cancel an order, for
+example if a product turns out to be out of stock or we can't confirm
+delivery details by phone.</p>
+
+<h2>Delivery</h2>
+<p>Delivery areas, cost, and estimated timing are confirmed by phone after
+you place an order, based on your city and address.</p>
+
+<h2>Returns &amp; exchanges</h2>
+<p>See our <a href="/returns">Returns &amp; Exchanges</a> page for the full policy.</p>
+
+<h2>Intellectual property</h2>
+<p>All content on this site — including the Loomex name, logo, product
+photography, and text — belongs to Loomex and may not be reused without
+permission.</p>
+
+<h2>Limitation of liability</h2>
+<p>Loomex isn't liable for indirect or incidental damages arising from use
+of this site or its products, to the extent permitted by law.</p>
+
+<h2>Contact</h2>
+<p>Questions about these terms? Reach us at
+<a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a>.</p>
+"""
+    return legal_page("Terms of Service", body, categories, cart_count, subcategories=subcategories,
+                      description="Terms of Service for shopping with Loomex.",
+                      path="/terms")
+
+
+def privacy_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+    body = """
+<p>This page explains what information Loomex collects when you shop with
+us, and how it's used.</p>
+
+<h2>What we collect</h2>
+<p>When you place an order, we collect the information you provide at
+checkout: your name, phone number, delivery address, and city. We don't
+collect payment card details, since we currently accept Cash on Delivery
+only.</p>
+
+<h2>How we use it</h2>
+<ul>
+  <li>To process and deliver your order.</li>
+  <li>To contact you by phone to confirm delivery details and cost.</li>
+</ul>
+<p>We don't sell your personal information, and we don't share your name,
+phone number, or address with advertising platforms.</p>
+
+<h2>Cookies &amp; analytics</h2>
+<p>We use a single cookie to remember what's in your shopping cart. It
+doesn't track you across other websites.</p>
+<p>We also use the Meta (Facebook/Instagram) Pixel, which sets its own
+cookies and collects browsing data — such as which pages and products you
+view — to help us understand site traffic and measure the performance of
+our ads. This is separate from the order information above: the pixel
+doesn't receive your name, phone number, or address. You can opt out of
+this kind of tracking in your browser or ad settings; see Meta's own
+<a href="https://www.facebook.com/privacy/policy/" target="_blank" rel="noopener">privacy policy</a>
+for how they handle this data.</p>
+
+<h2>Data storage</h2>
+<p>Order information is stored securely in our database and kept only as
+long as needed to fulfill and keep records of your order.</p>
+
+<h2>Your rights</h2>
+<p>You can ask us what information we hold about you, or ask us to delete
+it, by emailing <a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a>.</p>
+"""
+    return legal_page("Privacy Policy", body, categories, cart_count, subcategories=subcategories,
+                      description="How Loomex collects and uses your information.",
+                      path="/privacy-policy")
