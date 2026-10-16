@@ -23,7 +23,9 @@
       "Read(//System/Library/Fonts/Supplemental/**)",
       "Read(//System/Library/Fonts/**)",
       "Bash(.venv/bin/python3 -)",
-      "Bash(.venv/bin/pip uninstall *)"
+      "Bash(.venv/bin/pip uninstall *)",
+      "Bash(.venv/bin/pip show *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/product/nonexistent-slug)"
     ]
   }
 }

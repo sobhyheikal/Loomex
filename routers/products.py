@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 import templates
@@ -14,6 +14,6 @@ router = APIRouter()
 def product_detail(request: Request, slug: str):
     p = get_product_or_404(slug)
     if not p:
-        return HTMLResponse("<h1>Product not found</h1>", status_code=404)
+        raise HTTPException(status_code=404, detail="We couldn't find that product — it may no longer be available.")
     cart_count = cart_item_count(get_cart(request))
     return templates.product_page(p, CATEGORIES, cart_count, subcategories=SUBCATEGORIES)

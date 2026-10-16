@@ -30,6 +30,7 @@ create table orders (
   city text not null,
   payment_method text not null check (payment_method in ('cod', 'online')),
   payment_status text not null default 'pending',
+  shipping numeric(10,2) not null default 0,
   total numeric(10,2) not null,
   status text not null default 'new',
   created_at timestamptz not null default now()

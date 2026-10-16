@@ -20,6 +20,7 @@
   --line: rgba(241, 236, 226, 0.14);
   --radius: 2px;
   --max: 560px;             /* mobile-first content width, comfortable on phones */
+  --max-wide: 1180px;       /* wider container for nav/grid/hero/product on desktop */
 }
 
 * { box-sizing: border-box; }
@@ -501,4 +502,52 @@ a { color: inherit; text-decoration: none; }
 @media (min-width: 560px) {
   .grid { grid-template-columns: repeat(3, 1fr); }
   .hero h1 { font-size: 56px; }
+}
+
+/* ---------- desktop ---------- */
+@media (min-width: 900px) {
+  .topbar-inner { max-width: var(--max-wide); padding: 16px 32px; }
+  .back-btn-wrap { max-width: var(--max-wide); padding: 0 32px; }
+
+  .hero { padding: 72px 0 56px; }
+  .hero .wrap { max-width: var(--max-wide); padding: 0 32px; }
+  .hero h1 { font-size: 72px; }
+  .hero p { font-size: 17px; max-width: 42ch; }
+
+  .chips, .subtabs { max-width: var(--max-wide); padding-left: 32px; padding-right: 32px; }
+  .grid {
+    max-width: var(--max-wide);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
+    padding: 26px 32px;
+  }
+
+  /* Product detail: image beside info instead of stacked */
+  .pd-layout {
+    max-width: var(--max-wide);
+    margin: 0 auto;
+    padding: 32px 32px 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+  .pd-layout .pd-image,
+  .pd-layout .pg {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  .pd-layout .pd-body {
+    max-width: none;
+    margin: 0;
+    padding: 0 0 40px;
+  }
+
+  .wrap { max-width: var(--max-wide); }
+  .checkout .wrap, .success .wrap, .legal .wrap, .cart-page .wrap {
+    max-width: 640px;
+  }
+
+  .footer .wrap { max-width: var(--max-wide); }
 }

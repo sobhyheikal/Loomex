@@ -1,22 +1,13 @@
 import uuid
 
+from config import SHIPPING_RATES
 from supabase_client import supabase
 
 
 def create_order(customer_name: str, phone: str, city: str, address: str,
                   lines: list[dict], subtotal: float) -> str:
-    # -----------------------------------------------------------------
-    # SHIPPING COST — placeholder for now.
-    # -----------------------------------------------------------------
-    # Once you have per-city delivery rates and coverage worked out, add
-    # a lookup here, e.g.:
-    #   SHIPPING_RATES = {"Cairo": 60, "Alexandria": 70, ...}
-    #   shipping = SHIPPING_RATES.get(city, None)
-    #   if shipping is None: show an error, that city isn't covered yet
-    # and add `shipping` into `total` below. Until then, the order total
-    # is just the product subtotal, and delivery cost/coverage is
-    # confirmed with the customer by phone after ordering.
-    total = subtotal
+    shipping = SHIPPING_RATES.get(city, 0)
+    total = subtotal + shipping
 
     order_number = f"LMX-{uuid.uuid4().hex[:8].upper()}"
 
@@ -28,6 +19,7 @@ def create_order(customer_name: str, phone: str, city: str, address: str,
         "city": city,
         "payment_method": "cod",
         "payment_status": "pending",
+        "shipping": shipping,
         "total": total,
         "status": "new",
     }).execute()
@@ -48,8 +40,8 @@ def create_order(customer_name: str, phone: str, city: str, address: str,
 
 
 def get_order_by_number(order_number: str):
-    result = supabase.table("orders").select("*").eq("order_number", order_number).single().execute()
-    order = result.data
+    result = supabase.table("orders").select("*").eq("order_number", order_number).maybe_single().execute()
+    order = result.data if result else None
     if not order:
         return None
     items = supabase.table("order_items").select("*").eq("order_id", order["id"]).execute()

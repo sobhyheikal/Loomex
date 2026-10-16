@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from html import escape
 
-from config import META_PIXEL_ID, SITE_URL, TIKTOK_PIXEL_ID
+from config import META_PIXEL_ID, SHIPPING_RATES, SITE_URL, TIKTOK_PIXEL_ID
 
 FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
@@ -202,6 +202,15 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories, path="/")
 SHOP_CSS = """
 <style>
+.search-form{display:flex;align-items:center;gap:8px;padding:18px 18px 0;max-width:var(--max);margin:0 auto;}
+.search-form input[type=search]{flex:1;padding:10px 14px;border:1px solid var(--line);background:var(--ink-raised);
+  color:var(--paper);font-size:14px;font-family:inherit;border-radius:999px;}
+.search-form input[type=search]::placeholder{color:var(--paper-dim);}
+.search-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;flex:0 0 auto;
+  border:1px solid var(--line);background:transparent;color:var(--paper);border-radius:50%;cursor:pointer;padding:0;}
+.search-btn svg{width:17px;height:17px;}
+.search-btn:hover{border-color:var(--gold);color:var(--gold);}
+.search-clear{flex:0 0 auto;color:var(--paper-dim);font-size:12.5px;text-decoration:underline;white-space:nowrap;}
 .card{position:relative;}
 .card img{width:100%;height:auto;aspect-ratio:4/5;object-fit:contain;background:rgba(128,128,128,.10);display:none;}
 .card img.active{display:block;}
@@ -239,31 +248,49 @@ function cardStep(el, delta){
 """
 
 def shop_page(products: list, categories: list, active_category: str | None, cart_count: int = 0,
-              subcategories: dict | None = None, active_subcategory: str | None = None) -> str:
+              subcategories: dict | None = None, active_subcategory: str | None = None,
+              search: str | None = None) -> str:
     subcategories = subcategories or {}
-    chips = ['<a href="/shop" class="chip{}">All</a>'.format(" active" if not active_category else "")]
+    search = (search or "").strip()
+    q_suffix = f"&q={escape(search)}" if search else ""
+
+    chips = ['<a href="/shop{}" class="chip{}">All</a>'.format(
+        f"?q={escape(search)}" if search else "", " active" if not active_category else ""
+    )]
     for c in categories:
         active = " active" if active_category == c else ""
         label = c.replace("-", " ").title()
-        chips.append(f'<a href="/shop?category={c}" class="chip{active}">{escape(label)}</a>')
+        chips.append(f'<a href="/shop?category={c}{q_suffix}" class="chip{active}">{escape(label)}</a>')
 
     sub_chips_html = ""
     sub_items = subcategories.get(active_category) if active_category else None
     if sub_items:
         cat_label = active_category.replace("-", " ").title()
         sub_tabs = [
-            '<a href="/shop?category={}" class="subtab{}">All {}</a>'.format(
-                active_category, "" if not active_subcategory else " active", escape(cat_label)
+            '<a href="/shop?category={}{}" class="subtab{}">All {}</a>'.format(
+                active_category, q_suffix, "" if not active_subcategory else " active", escape(cat_label)
             )
         ]
         for s in sub_items:
             s_active = " active" if active_subcategory == s else ""
             s_label = s.replace("-", " ").title()
             sub_tabs.append(
-                f'<a href="/shop?category={active_category}&subcategory={s}" '
+                f'<a href="/shop?category={active_category}&subcategory={s}{q_suffix}" '
                 f'class="subtab{s_active}">{escape(s_label)}</a>'
             )
         sub_chips_html = f'<nav class="subtabs">{"".join(sub_tabs)}</nav>'
+
+    search_form = f"""
+<form action="/shop" method="get" class="search-form">
+  {f'<input type="hidden" name="category" value="{escape(active_category)}">' if active_category else ""}
+  {f'<input type="hidden" name="subcategory" value="{escape(active_subcategory)}">' if active_subcategory else ""}
+  <input type="search" name="q" value="{escape(search)}" placeholder="Search products..." aria-label="Search products">
+  <button type="submit" class="search-btn" aria-label="Search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+  </button>
+  {f'<a href="/shop{("?category=" + active_category) if active_category else ""}" class="search-clear">Clear</a>' if search else ""}
+</form>
+"""
 
     if products:
         card_blocks = []
@@ -322,20 +349,27 @@ def shop_page(products: list, categories: list, active_category: str | None, car
                     </a>"""
             )
         grid = f'<div class="grid">{"".join(card_blocks)}</div>'
+    elif search:
+        grid = f'<div class="empty">No products match "{escape(search)}".</div>'
     else:
         grid = '<div class="empty">No products in this category yet.</div>'
 
     body = f"""
 {SHOP_CSS}
+{search_form}
 <nav class="chips">{''.join(chips)}</nav>
 {sub_chips_html}
 {grid}
 """
-    shop_title = active_category.replace("-", " ").title() if active_category else "Shop All"
-    shop_description = (
-        f"Shop {shop_title} at Loomex — heavyweight cotton homewear made for comfort."
-        if active_category else DEFAULT_DESCRIPTION
-    )
+    if search:
+        shop_title = f'"{search}"'
+        shop_description = f'Search results for "{search}" at Loomex.'
+    else:
+        shop_title = active_category.replace("-", " ").title() if active_category else "Shop All"
+        shop_description = (
+            f"Shop {shop_title} at Loomex — heavyweight cotton homewear made for comfort."
+            if active_category else DEFAULT_DESCRIPTION
+        )
     return layout(shop_title, body, categories, cart_count, active_category=active_category,
                   subcategories=subcategories, active_subcategory=active_subcategory,
                   description=shop_description, path="/shop")
@@ -440,6 +474,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
     )
 
     body = f"""
+<div class="pd-layout">
 {image_block}
 <div class="pd-body">
   <h1 class="pd-name display">{escape(p['name'])}</h1>
@@ -461,6 +496,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
     <button class="btn" type="submit">Add to Cart</button>
   </form>
+</div>
 </div>
 """
     product_description = p.get("description") or f"{p['name']} — {p['price']:.0f} EGP at Loomex."
@@ -487,7 +523,8 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
   <a href="/shop" class="btn">Continue Shopping</a>
 </div>
 """
-        return layout("Your Cart", body, categories, cart_count, subcategories=subcategories, path="/cart")
+        return layout("Your Cart", body, categories, cart_count, subcategories=subcategories, path="/cart",
+                      section_class="cart-page")
 
     rows = []
     for line in lines:
@@ -522,11 +559,19 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
     <span>Subtotal</span>
     <span>{subtotal:.0f} EGP</span>
   </div>
-  <p style="color:var(--paper-dim);font-size:12.5px;margin:8px 0 20px;">Delivery cost confirmed by phone after ordering.</p>
+  <p style="color:var(--paper-dim);font-size:12.5px;margin:8px 0 20px;">Shipping cost is calculated at checkout based on your city.</p>
   <a href="/checkout" class="btn">Checkout</a>
 </div>
 """
-    return layout("Your Cart", body, categories, cart_count, subcategories=subcategories, path="/cart")
+    return layout("Your Cart", body, categories, cart_count, subcategories=subcategories, path="/cart",
+                  section_class="cart-page")
+
+
+CHECKOUT_CSS = """
+<style>
+.checkout-hint { color: var(--paper-dim); font-size: 12.5px; margin: -8px 0 20px; }
+</style>
+"""
 
 
 def checkout_page(lines: list, subtotal: float, categories: list, cart_count: int = 0, error: str | None = None,
@@ -540,19 +585,31 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
     )
     error_html = f'<p style="color:#a33;font-size:13px;margin-bottom:14px;">{escape(error)}</p>' if error else ""
 
+    city_options = "".join(
+        f'<option value="{escape(city)}">{escape(city)}</option>' for city in SHIPPING_RATES
+    )
+    rates_json = json.dumps(SHIPPING_RATES)
+
     body = f"""
+{CHECKOUT_CSS}
 <div class="wrap">
   <h1 class="display">Checkout</h1>
   <p class="sub">Almost there — fill in your details below.</p>
 
   {summary_rows}
-  <div class="summary-line summary-total">
+  <div class="summary-line">
     <span>Subtotal</span>
     <span>{subtotal:.0f} EGP</span>
   </div>
-  <p style="color:var(--ink-dim-on-stone);font-size:12.5px;margin:6px 0 20px;">
-    Delivery destination coverage and shipping cost will be confirmed by phone after you order.
-  </p>
+  <div class="summary-line" id="shipping-row">
+    <span>Shipping</span>
+    <span id="shipping-amount">—</span>
+  </div>
+  <div class="summary-line summary-total">
+    <span>Total</span>
+    <span id="total-amount">{subtotal:.0f} EGP</span>
+  </div>
+  <p class="checkout-hint" id="shipping-hint">Select your city below to see the shipping cost.</p>
 
   {error_html}
 
@@ -567,7 +624,10 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
     </div>
     <div class="form-group">
       <label>City</label>
-      <input type="text" name="city" required>
+      <select name="city" id="city-select" required onchange="loomexUpdateShipping(this.value)">
+        <option value="" disabled selected>Select your city</option>
+        {city_options}
+      </select>
     </div>
     <div class="form-group">
       <label>Full address</label>
@@ -581,6 +641,17 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
     <button class="btn" type="submit" style="margin-top:20px;">Place Order</button>
   </form>
 </div>
+<script>
+var LOOMEX_RATES = {rates_json};
+var LOOMEX_SUBTOTAL = {subtotal:.2f};
+function loomexUpdateShipping(city) {{
+  var rate = LOOMEX_RATES[city];
+  if (rate === undefined) return;
+  document.getElementById('shipping-amount').textContent = rate.toFixed(0) + ' EGP';
+  document.getElementById('total-amount').textContent = (LOOMEX_SUBTOTAL + rate).toFixed(0) + ' EGP';
+  document.getElementById('shipping-hint').style.display = 'none';
+}}
+</script>
 """
     return layout("Checkout", body, categories, cart_count, section_class="checkout", subcategories=subcategories, path="/checkout")
 
@@ -665,8 +736,9 @@ RECEIPT_CSS = """
 
 def success_page(order: dict, categories: list, subcategories: dict | None = None) -> str:
     items = order.get("items") or []
-    subtotal = sum(float(i["unit_price"]) * int(i["quantity"]) for i in items) or float(order.get("total") or 0)
-    total = float(order.get("total") or subtotal)
+    subtotal = sum(float(i["unit_price"]) * int(i["quantity"]) for i in items)
+    shipping = float(order.get("shipping") or 0)
+    total = float(order.get("total") or (subtotal + shipping))
     payment_label = PAYMENT_LABELS.get(order.get("payment_method"), "Cash on Delivery")
 
     created_at = order.get("created_at") or ""
@@ -723,6 +795,7 @@ def success_page(order: dict, categories: list, subcategories: dict | None = Non
 
     <div class="receipt-totals">
       <div class="receipt-total-row"><span>SUBTOTAL</span><span>{subtotal:.0f} EGP</span></div>
+      <div class="receipt-total-row"><span>SHIPPING</span><span>{shipping:.0f} EGP</span></div>
       <div class="receipt-total-row receipt-total-main"><span>TOTAL</span><span>{total:.0f} EGP</span></div>
     </div>
 
@@ -955,3 +1028,35 @@ it, by emailing <a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a>.</p
     return legal_page("Privacy Policy", body, categories, cart_count, subcategories=subcategories,
                       description="How Loomex collects and uses your information.",
                       path="/privacy-policy")
+
+
+# ----------------------------------------------------------------------
+# ERROR PAGES — 404 and other HTTP errors, styled to match the site
+# instead of a bare <h1>.
+# ----------------------------------------------------------------------
+ERROR_CSS = """
+<style>
+.error-page .wrap { padding: 60px 18px; text-align: center; min-height: 50vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.error-code { font-family: "Big Shoulders Display", sans-serif; font-weight: 700;
+  font-size: 72px; color: var(--gold); letter-spacing: 0.05em; margin: 0; }
+.error-message { font-size: 15px; color: var(--paper-dim); margin: 10px 0 28px; max-width: 32ch; }
+</style>
+"""
+
+
+def error_page(categories: list, cart_count: int = 0, subcategories: dict | None = None,
+                status_code: int = 404, message: str | None = None) -> str:
+    message = message or "That page doesn't exist — it may have been moved or the link is out of date."
+    body = f"""
+{ERROR_CSS}
+<div class="error-page">
+  <div class="wrap">
+    <p class="error-code">{status_code}</p>
+    <p class="error-message">{escape(message)}</p>
+    <a href="/shop" class="btn" style="max-width:220px;">Back to Shop</a>
+  </div>
+</div>
+"""
+    title = "Page not found" if status_code == 404 else "Something went wrong"
+    return layout(title, body, categories, cart_count, subcategories=subcategories)

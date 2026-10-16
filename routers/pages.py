@@ -17,12 +17,12 @@ def home(request: Request):
 
 
 @router.get("/shop", response_class=HTMLResponse)
-def shop(request: Request, category: str | None = None, subcategory: str | None = None):
-    products, subcategory = list_shop_products(category, subcategory, CATEGORIES, SUBCATEGORIES)
+def shop(request: Request, category: str | None = None, subcategory: str | None = None, q: str | None = None):
+    products, subcategory = list_shop_products(category, subcategory, CATEGORIES, SUBCATEGORIES, search=q)
     cart_count = cart_item_count(get_cart(request))
     return templates.shop_page(
         products, CATEGORIES, category, cart_count,
-        subcategories=SUBCATEGORIES, active_subcategory=subcategory,
+        subcategories=SUBCATEGORIES, active_subcategory=subcategory, search=q,
     )
 
 
