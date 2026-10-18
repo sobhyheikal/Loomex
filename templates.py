@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from html import escape
 
-from config import META_PIXEL_ID, SHIPPING_RATES, SITE_URL, TIKTOK_PIXEL_ID
+from config import META_PIXEL_ID, PAYMENT_METHODS, SHIPPING_RATES, SITE_URL, TIKTOK_PIXEL_ID
 
 FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
@@ -570,6 +570,16 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
 CHECKOUT_CSS = """
 <style>
 .checkout-hint { color: var(--paper-dim); font-size: 12.5px; margin: -8px 0 20px; }
+.pay-option input[type=radio] { margin: 3px 0 0; accent-color: var(--gold); flex: 0 0 auto; }
+.payment-proof-box {
+  border: 1px solid var(--line); background: var(--ink-raised); padding: 14px;
+  margin: -2px 0 10px; font-size: 13px;
+}
+.payment-proof-detail { color: var(--paper); margin: 0; line-height: 1.6; }
+.payment-proof-box input[type=file] {
+  width: 100%; margin-top: 8px; padding: 10px; border: 1px solid var(--line);
+  background: var(--ink); color: var(--paper); font-size: 13px; font-family: inherit;
+}
 </style>
 """
 
@@ -589,6 +599,16 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
         f'<option value="{escape(city)}">{escape(city)}</option>' for city in SHIPPING_RATES
     )
     rates_json = json.dumps(SHIPPING_RATES)
+
+    payment_options = "".join(
+        f"""<label class="pay-option">
+              <input type="radio" name="payment_method" value="{key}"{' checked' if key == 'cod' else ''}
+                onchange="loomexShowPayment('{key}')">
+              <span><strong>{escape(m['label'])}</strong><span>{escape(m['description'])}</span></span>
+            </label>"""
+        for key, m in PAYMENT_METHODS.items()
+    )
+    payment_details_json = json.dumps({k: m["detail"] for k, m in PAYMENT_METHODS.items() if k != "cod"})
 
     body = f"""
 {CHECKOUT_CSS}
@@ -613,7 +633,7 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
 
   {error_html}
 
-  <form action="/checkout" method="post" style="margin-top:10px;">
+  <form action="/checkout" method="post" enctype="multipart/form-data" style="margin-top:10px;">
     <div class="form-group">
       <label>Full name</label>
       <input type="text" name="customer_name" required>
@@ -634,8 +654,13 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
       <input type="text" name="address" required>
     </div>
 
-    <div class="pay-option" style="cursor:default;">
-      <span><strong>Cash on Delivery</strong><span>Pay in cash when your order arrives — the only payment option right now.</span></span>
+    <span class="field-label">Payment Method</span>
+    {payment_options}
+
+    <div class="payment-proof-box" id="payment-proof-box" style="display:none;">
+      <p class="payment-proof-detail" id="payment-proof-detail"></p>
+      <label class="field-label" style="margin-top:14px;">Upload payment screenshot</label>
+      <input type="file" name="payment_proof" accept="image/*" id="payment-proof-input">
     </div>
 
     <button class="btn" type="submit" style="margin-top:20px;">Place Order</button>
@@ -644,6 +669,7 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
 <script>
 var LOOMEX_RATES = {rates_json};
 var LOOMEX_SUBTOTAL = {subtotal:.2f};
+var LOOMEX_PAYMENT_DETAILS = {payment_details_json};
 function loomexUpdateShipping(city) {{
   var rate = LOOMEX_RATES[city];
   if (rate === undefined) return;
@@ -651,12 +677,26 @@ function loomexUpdateShipping(city) {{
   document.getElementById('total-amount').textContent = (LOOMEX_SUBTOTAL + rate).toFixed(0) + ' EGP';
   document.getElementById('shipping-hint').style.display = 'none';
 }}
+function loomexShowPayment(method) {{
+  var box = document.getElementById('payment-proof-box');
+  var input = document.getElementById('payment-proof-input');
+  var detail = LOOMEX_PAYMENT_DETAILS[method];
+  if (detail) {{
+    box.style.display = 'block';
+    input.required = true;
+    document.getElementById('payment-proof-detail').innerHTML =
+      'Send the <strong>total</strong> shown above to:<br><strong>' + detail + '</strong>';
+  }} else {{
+    box.style.display = 'none';
+    input.required = false;
+  }}
+}}
 </script>
 """
     return layout("Checkout", body, categories, cart_count, section_class="checkout", subcategories=subcategories, path="/checkout")
 
 
-PAYMENT_LABELS = {"cod": "Cash on Delivery", "online": "Online Payment"}
+PAYMENT_LABELS = {k: m["label"] for k, m in PAYMENT_METHODS.items()}
 
 RECEIPT_CSS = """
 <style>

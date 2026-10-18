@@ -25,7 +25,9 @@
       "Bash(.venv/bin/python3 -)",
       "Bash(.venv/bin/pip uninstall *)",
       "Bash(.venv/bin/pip show *)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/product/nonexistent-slug)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:8008/product/nonexistent-slug)",
+      "Bash(.venv/bin/python3 -c ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\\\\n\" \"https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/sign/payment_proofs/8a708501e3ab40fa997cbecd6a77d417.png?token=eyJraWQiOiI5NDZkZDcyOC0wM2M4LTRhMjUtYWYzOS0zNjA5NWJmNGMzMDUiLCJhbGciOiJIUzUxMiJ9.eyJ1cmwiOiJwYXltZW50X3Byb29mcy84YTcwODUwMWUzYWI0MGZhOTk3Y2JlY2Q2YTc3ZDQxNy5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzkyMjI2NjI2LCJleHAiOjIxMDc1ODY2MjZ9.HR-WQWhPRFVIuKR9HemtwtuYSbhkHgj2jPyBmOWTPWq0rzcVLeTJKx29LOEK8V3h6JodvAd2DW7lrFCPqybTfg\")"
     ]
   }
 }

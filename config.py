@@ -19,6 +19,31 @@ META_PIXEL_ID = "1069351069434655"
 TIKTOK_PIXEL_ID = "DB9884RC77UACVVNC4F0"
 
 # ----------------------------------------------------------------------
+# PAYMENT METHODS — Cash on Delivery needs nothing extra. InstaPay and
+# E& Money / Etisalat Cash are manual transfers: the customer sends the
+# order total to the handle/number below and uploads a screenshot as
+# proof at checkout; you confirm it arrived before shipping (same
+# manual-confirmation pattern as COD, just a different payment rail —
+# there's no public payment-gateway API for these in Egypt at this scale).
+# ----------------------------------------------------------------------
+PAYMENT_METHODS = {
+    "cod": {
+        "label": "Cash on Delivery",
+        "description": "Pay in cash when your order arrives.",
+    },
+    "instapay": {
+        "label": "InstaPay",
+        "description": "Pay by InstaPay transfer, then upload a screenshot as proof.",
+        "detail": "sobhyheikal43@instapay (or 01130704895)",
+    },
+    "e_money": {
+        "label": "E& Money / Etisalat Cash",
+        "description": "Pay by wallet transfer, then upload a screenshot as proof.",
+        "detail": "01130704895",
+    },
+}
+
+# ----------------------------------------------------------------------
 # SHIPPING RATES — EGP, by city/zone (your real courier rate sheet).
 # Shown live at checkout and stored on the order. The dropdown at
 # checkout is built from this dict's keys, in this order.
