@@ -38,6 +38,16 @@ def cart_item_count(cart: list[dict]) -> int:
     return sum(item.get("qty", 0) for item in cart)
 
 
+def _line_image(product: dict, color: str):
+    """First photo of the chosen color, else the product's main photo."""
+    imgs = (product.get("color_images") or {}).get(color)
+    if isinstance(imgs, list) and imgs:
+        return imgs[0]
+    if isinstance(imgs, str) and imgs:
+        return imgs
+    return product.get("image_url")
+
+
 def resolve_cart(cart: list[dict]):
     """Turn the cookie's {slug, size, color, qty} list into full line items
     with live name/price/image pulled from Supabase, plus a subtotal."""
@@ -60,7 +70,7 @@ def resolve_cart(cart: list[dict]):
             "slug": p["slug"],
             "name": p["name"],
             "price": float(p["price"]),
-            "image_url": p.get("image_url"),
+                        "image_url": _line_image(p, item.get("color", "")),
             "size": item.get("size", ""),
             "color": item.get("color", ""),
             "qty": item["qty"],

@@ -96,7 +96,84 @@ def _category_links(categories: list, subcategories: dict | None = None, active:
             links.append(f'<div class="drawer-sub-nested">{"".join(sub_links)}</div>')
     return "".join(links)
 
-
+CART_DRAWER_CSS = """
+<style>
+.cart-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
+  opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index: 39;
+}
+.cart-backdrop.open { opacity: 1; pointer-events: auto; }
+.cart-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 400px;
+  background: var(--ink); border-left: 1px solid var(--line); z-index: 40;
+  display: flex; flex-direction: column;
+  transform: translateX(100%); visibility: hidden;
+  transition: transform 0.25s ease, visibility 0s linear 0.25s;
+}
+.cart-drawer.open { transform: translateX(0); visibility: visible; transition: transform 0.25s ease, visibility 0s; }
+.cart-drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid var(--line);
+}
+.cart-drawer-title {
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 22px;
+  letter-spacing: 0.03em; text-transform: uppercase; color: var(--paper);
+}
+.cart-drawer-close {
+  background: none; border: none; color: var(--paper-dim);
+  font-size: 28px; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.cart-drawer-body { flex: 1; overflow-y: auto; padding: 0 20px; }
+.cart-drawer-foot { padding: 16px 20px 22px; border-top: 1px solid var(--line); }
+.cart-drawer-foot:empty { display: none; }
+.cd-line {
+  display: grid; grid-template-columns: 64px 1fr auto; gap: 12px;
+  padding: 16px 0; border-bottom: 1px solid var(--line); align-items: flex-start;
+}
+.cd-img { width: 64px; aspect-ratio: 4/5; object-fit: contain; background: rgba(128, 128, 128, 0.12); }
+.cd-name { font-size: 14px; margin: 0 0 2px; color: var(--paper); }
+.cd-variant { font-size: 12px; color: var(--paper-dim); margin: 0 0 10px; text-transform: capitalize; }
+.cd-qty { display: inline-flex; align-items: center; border: 1px solid var(--line); }
+.cd-qty button {
+  width: 30px; height: 30px; background: none; border: none;
+  color: var(--paper); font-size: 16px; cursor: pointer;
+}
+.cd-qty button:disabled { color: var(--paper-dim); opacity: 0.4; cursor: default; }
+.cd-qty span { min-width: 28px; text-align: center; font-size: 13px; color: var(--paper); }
+.cd-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.cd-total { font-size: 13px; font-weight: 600; white-space: nowrap; margin: 0; color: var(--paper); }
+.cd-remove {
+  background: none; border: none; color: var(--paper-dim);
+  font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0;
+}
+.cd-empty { color: var(--paper-dim); font-size: 14px; padding: 30px 0; text-align: center; }
+.cd-subtotal { display: flex; justify-content: space-between; font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.cd-note { color: var(--paper-dim); font-size: 12px; margin: 0 0 14px; }
+.cd-viewcart {
+  display: block; text-align: center; color: var(--paper-dim);
+  font-size: 12.5px; text-decoration: underline; margin-top: 12px;
+}
+body.cart-open { overflow: hidden; }
+.cart-line-img { object-fit: contain; background: rgba(128, 128, 128, 0.12); }
+</style>
+"""
+FOOTER_CSS = """
+<style>
+.footer { padding: 0; margin-top: 30px; border-top: 1px solid var(--line); background: var(--ink); }
+.footer-inner {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 14px 18px; max-width: var(--max); margin: 0 auto;
+}
+.footer-left { justify-self: start; }
+.footer-privacy { color: var(--paper-dim); font-size: 11.5px; text-decoration: underline; }
+.footer-social { justify-self: end; display: flex; align-items: center; gap: 14px; }
+.social-link { display: inline-flex; color: var(--paper); }
+.social-link svg { width: 22px; height: 22px; }
+a.social-link:hover { color: var(--gold); }
+span.social-link { cursor: default; }
+@media (min-width: 900px) { .footer-inner { max-width: var(--max-wide); padding: 16px 32px; } }
+</style>
+"""
 def layout(title: str, body: str, categories: list, cart_count: int = 0,
            section_class: str = "", active_category: str | None = None,
            subcategories: dict | None = None, active_subcategory: str | None = None,
@@ -137,7 +214,7 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 {FONTS}
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=2">
 {pixel_snippet}
 </head>
 <body class="{section_class}">
@@ -147,9 +224,9 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
   <label for="menu-toggle" class="drawer-close">&times;</label>
   <a href="/" class="drawer-link">Home</a>
   <a href="/shop" class="drawer-link">Shop All</a>
-  <div class="drawer-sub">{cat_links}</div>
+     <div class="drawer-sub">{cat_links}</div>
   <hr class="thread-rule">
-  <a href="/cart" class="drawer-link">Cart{f' ({cart_count})' if cart_count else ''}</a>
+  <a href="/returns" class="drawer-link">Return Policy</a>
 </nav>
 
 <header class="topbar">
@@ -170,19 +247,40 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
     </a>
   </div>
 </header>
+{CART_DRAWER_CSS}
+<div class="cart-backdrop" id="cart-backdrop"></div>
+<aside class="cart-drawer" id="cart-drawer" aria-hidden="true" aria-label="Shopping cart">
+  <div class="cart-drawer-head">
+    <span class="cart-drawer-title">Your Cart</span>
+    <button type="button" class="cart-drawer-close" data-act="close" aria-label="Close cart">&times;</button>
+  </div>
+  <div class="cart-drawer-body" id="cart-drawer-body"></div>
+  <div class="cart-drawer-foot" id="cart-drawer-foot"></div>
+</aside>
 {f'<div class="back-btn-wrap">{back_btn}</div>' if show_back else ""}
 {body}
+{FOOTER_CSS}
 <footer class="footer">
-  <div class="wrap">
-    <nav class="footer-links">
-      <a href="/about">About &amp; Contact</a>
-      <a href="/returns">Returns &amp; Exchanges</a>
-      <a href="/terms">Terms of Service</a>
-      <a href="/privacy-policy">Privacy Policy</a>
-    </nav>
-    <p>LOOMEX — HOMEWEAR, WOVEN FOR REST</p>
+  <div class="footer-inner">
+    <div class="footer-left"></div>
+    <a href="/" class="logo">LOOM<span>EX</span></a>
+    <div class="footer-social">
+      <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener" class="social-link" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+          <circle cx="12" cy="12" r="4"></circle>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+        </svg>
+      </a>
+      <span class="social-link" aria-label="TikTok">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 7.917v4.034a9.948 9.948 0 0 1 -5 -1.951v4.5a6.5 6.5 0 1 1 -8 -6.326v4.326a2.5 2.5 0 1 0 4 2v-11.5h4.083a6.005 6.005 0 0 0 4.917 4.917z"></path>
+        </svg>
+      </span>
+    </div>
   </div>
 </footer>
+<script src="/static/cart-drawer.js" defer></script>
 </body>
 </html>"""
 
@@ -225,6 +323,14 @@ SHOP_CSS = """
 .swatch{width:16px;height:16px;border-radius:50%;border:2px solid transparent;background-size:cover;
   background-position:center;cursor:pointer;padding:0;}
 .swatch.active{border-color:var(--gold,#c9a24a);}
+.subtabs{gap:0;padding:14px 18px 8px;border-bottom:1px solid var(--line);}
+.subtab{flex:0 0 auto;margin:0;padding:6px 16px;border:none;border-radius:0;background:transparent;
+  font-family:"Big Shoulders Display",sans-serif;font-size:19px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--paper-dim);}
+.subtab + .subtab{border-left:1px solid var(--line);}
+.subtab.active{color:var(--gold);background:none;box-shadow:inset 0 -2px 0 var(--gold);}
+@media (min-width:560px){.subtabs{justify-content:center;}}
+@media (min-width:900px){.subtabs{padding-left:32px;padding-right:32px;}}
 </style>
 <script>
 function cardShowColor(el, ci){
@@ -268,7 +374,7 @@ def shop_page(products: list, categories: list, active_category: str | None, car
         cat_label = active_category.replace("-", " ").title()
         sub_tabs = [
             '<a href="/shop?category={}{}" class="subtab{}">All {}</a>'.format(
-                active_category, q_suffix, "" if not active_subcategory else " active", escape(cat_label)
+                active_category, q_suffix, " active" if not active_subcategory else "", escape(cat_label)
             )
         ]
         for s in sub_items:
@@ -284,11 +390,11 @@ def shop_page(products: list, categories: list, active_category: str | None, car
 <form action="/shop" method="get" class="search-form">
   {f'<input type="hidden" name="category" value="{escape(active_category)}">' if active_category else ""}
   {f'<input type="hidden" name="subcategory" value="{escape(active_subcategory)}">' if active_subcategory else ""}
-  <input type="search" name="q" value="{escape(search)}" placeholder="Search products..." aria-label="Search products">
+  <input type="search" name="q" id="shop-search" value="{escape(search)}" placeholder="Search products..." aria-label="Search products" autocomplete="off">
   <button type="submit" class="search-btn" aria-label="Search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
   </button>
-  {f'<a href="/shop{("?category=" + active_category) if active_category else ""}" class="search-clear">Clear</a>' if search else ""}
+  <a href="/shop{('?category=' + escape(active_category)) if active_category else ''}" class="search-clear" id="shop-clear"{'' if search else ' hidden'}>Clear</a>
 </form>
 """
 
@@ -357,9 +463,10 @@ def shop_page(products: list, categories: list, active_category: str | None, car
     body = f"""
 {SHOP_CSS}
 {search_form}
-<nav class="chips">{''.join(chips)}</nav>
-{sub_chips_html}
-{grid}
+<div id="shop-filters"><nav class="chips">{''.join(chips)}</nav>
+{sub_chips_html}</div>
+<div id="shop-results">{grid}</div>
+<script src="/static/shop-search.js?v=2" defer></script>
 """
     if search:
         shop_title = f'"{search}"'
@@ -385,6 +492,10 @@ GALLERY_CSS = """
   background:rgba(0,0,0,.55);color:#fff;font-size:22px;line-height:1;cursor:pointer;z-index:2;}
 .pg-prev{left:8px;}
 .pg-next{right:8px;}
+.pg-label{position:absolute;left:8px;top:8px;z-index:2;padding:4px 10px;border-radius:999px;
+  background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;pointer-events:none;}
+.pg-label:empty{display:none;}
 .pg-dots{display:flex;justify-content:center;gap:8px;margin-top:10px;}
 .pg-dot{width:9px;height:9px;border-radius:5px;border:0;padding:0;background:rgba(128,128,128,.55);cursor:pointer;transition:width .2s;}
 .pg-dot.active{width:22px;background:var(--gold,#c9a24a);}
@@ -404,6 +515,8 @@ function pgSet(ci, idx){
   var dots = g.querySelectorAll('.pg-dot');
   imgs.forEach(function(im, i){ im.classList.toggle('active', i === idx); });
   dots.forEach(function(d, i){ d.classList.toggle('active', i === idx); });
+  var lab = g.querySelector('.pg-label');
+  if (lab) lab.textContent = imgs[idx].dataset.label || '';
 }
 function pgStep(ci, delta){
   var g = document.querySelector('.pg-group[data-ci="' + ci + '"]');
@@ -428,10 +541,15 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
     if color_images:
         groups = []
+        labeled = p.get("category") in ("tops", "tank-tops", "pants")
+
+        def _label(n):
+            return ("Front", "Back")[n] if labeled and n < 2 else ""
+
         for ci, c in enumerate(colors):
             urls = color_images.get(c) or [p.get("image_url") or ""]
             imgs = "".join(
-                f'<img src="{escape(u)}" alt="{escape(p["name"])} in {escape(c)}"'
+                f'<img src="{escape(u)}" alt="{escape(p["name"])} in {escape(c)}" data-label="{_label(n)}"'
                 f'{" class=active" if n == 0 else ""}>'
                 for n, u in enumerate(urls)
             )
@@ -449,7 +567,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
                 arrows, dots = "", ""
             groups.append(
                 f'<div class="pg-group{" active" if ci == 0 else ""}" data-ci="{ci}">'
-                f'<div class="pg-view">{imgs}{arrows}</div>{dots}</div>'
+                f'<div class="pg-view">{imgs}<span class="pg-label">{_label(0)}</span>{arrows}</div>{dots}</div>'
             )
         image_block = f'{GALLERY_CSS}<div class="pg">{"".join(groups)}</div>{GALLERY_JS}'
         color_pills = "".join(
@@ -467,10 +585,10 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
     add_to_cart_js = (
         f"if(window.fbq){{fbq('track','AddToCart',{{content_ids:['{p['slug']}'],content_type:'product',"
-        f"value:{p['price']:.2f}*(this.qty.value||1),currency:'EGP'}});}}"
+        f"value:{p['price']:.2f},currency:'EGP'}});}}"
         f"if(window.ttq){{ttq.track('AddToCart',{{content_id:'{p['slug']}',content_type:'product',"
-        f"quantity:Number(this.qty.value||1),price:{p['price']:.2f},"
-        f"value:{p['price']:.2f}*(this.qty.value||1),currency:'EGP'}});}}"
+        f"quantity:1,price:{p['price']:.2f},"
+        f"value:{p['price']:.2f},currency:'EGP'}});}}"
     )
 
     body = f"""
@@ -489,10 +607,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
     {"<span class='field-label'>Color</span><div class='pill-row'>" + color_pills + "</div>" if color_pills else ""}
 
-    <span class="field-label">Quantity</span>
-    <div class="qty-row">
-      <input type="number" name="qty" value="1" min="1" max="10">
-    </div>
+   
 
     <button class="btn" type="submit">Add to Cart</button>
   </form>
@@ -537,9 +652,11 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
     <p class="cart-line-variant">{escape(variant)}</p>
     <p class="cart-line-price">{line['price']:.0f} EGP</p>
     <div class="cart-line-controls">
-      <form action="/cart/update" method="post" class="qty-inline-form">
+           <form action="/cart/update" method="post" class="cd-qty">
         <input type="hidden" name="index" value="{line['index']}">
-        <input type="number" name="qty" value="{line['qty']}" min="1" max="10" onchange="this.form.submit()">
+        <button type="submit" name="qty" value="{line['qty'] - 1}"{' disabled' if line['qty'] <= 1 else ''} aria-label="Decrease quantity">&minus;</button>
+        <span>{line['qty']}</span>
+        <button type="submit" name="qty" value="{line['qty'] + 1}"{' disabled' if line['qty'] >= 10 else ''} aria-label="Increase quantity">+</button>
       </form>
       <form action="/cart/remove" method="post">
         <input type="hidden" name="index" value="{line['index']}">
@@ -931,101 +1048,6 @@ def legal_page(title: str, body: str, categories: list, cart_count: int = 0,
                   description=description, path=path)
 
 
-def about_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
-    body = """
-<p>Loomex makes heavyweight cotton homewear — tops, pants, pullovers,
-quarter-zips and jackets built for the hours that don't need an outfit.</p>
-
-<h2>Get in touch</h2>
-<p>Questions about an order, sizing, or anything else — reach us any time:</p>
-<div class="legal-contact-block">
-  <p><span class="label">Email</span><a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a></p>
-  <p><span class="label">Phone / WhatsApp</span><a href="tel:+201130704895">01130704895</a></p>
-</div>
-<p>We currently ship within Egypt and accept Cash on Delivery only.
-Delivery cost and timing are confirmed by phone after you place an order.</p>
-"""
-    return legal_page("About & Contact", body, categories, cart_count, subcategories=subcategories,
-                      description="Get in touch with Loomex — questions about an order, sizing, or anything else.",
-                      path="/about")
-
-
-def returns_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
-    body = """
-<p>We want you to be happy with your order. If something isn't right,
-here's how returns and exchanges work.</p>
-
-<h2>Return window</h2>
-<p>You have <strong>7 days from the date your order is delivered</strong> to
-request a return or exchange.</p>
-
-<h2>Condition</h2>
-<ul>
-  <li>Items must be unworn, unwashed, and in their original condition.</li>
-  <li>Tags (if any) must still be attached.</li>
-</ul>
-
-<h2>Return shipping</h2>
-<p>Return shipping is paid by the customer. We recommend a trackable courier —
-we can't issue a refund or exchange for an item that doesn't reach us.</p>
-
-<h2>Refunds</h2>
-<p>Since we currently accept Cash on Delivery only, refunds are issued as
-store credit, or by bank/wallet transfer if you'd prefer — just let us know
-when you reach out.</p>
-
-<h2>How to start a return</h2>
-<p>Email <a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a> or message
-us at <a href="tel:+201130704895">01130704895</a> with your order number and the
-reason for the return, and we'll walk you through the next steps.</p>
-"""
-    return legal_page("Returns & Exchanges", body, categories, cart_count, subcategories=subcategories,
-                      description="Loomex returns and exchanges policy — 7-day return window, how refunds work.",
-                      path="/returns")
-
-
-def terms_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
-    body = """
-<p>These terms apply to any order placed through the Loomex website. By
-placing an order, you agree to them.</p>
-
-<h2>Products &amp; pricing</h2>
-<p>All prices are listed in Egyptian Pounds (EGP). We try to keep product
-photos, descriptions, and sizing accurate, but occasional errors can happen —
-if a listed price or description is wrong, we'll contact you before
-processing the order.</p>
-
-<h2>Orders &amp; payment</h2>
-<p>We currently accept Cash on Delivery only. Placing an order is a request
-to buy, not a guaranteed sale — we may decline or cancel an order, for
-example if a product turns out to be out of stock or we can't confirm
-delivery details by phone.</p>
-
-<h2>Delivery</h2>
-<p>Delivery areas, cost, and estimated timing are confirmed by phone after
-you place an order, based on your city and address.</p>
-
-<h2>Returns &amp; exchanges</h2>
-<p>See our <a href="/returns">Returns &amp; Exchanges</a> page for the full policy.</p>
-
-<h2>Intellectual property</h2>
-<p>All content on this site — including the Loomex name, logo, product
-photography, and text — belongs to Loomex and may not be reused without
-permission.</p>
-
-<h2>Limitation of liability</h2>
-<p>Loomex isn't liable for indirect or incidental damages arising from use
-of this site or its products, to the extent permitted by law.</p>
-
-<h2>Contact</h2>
-<p>Questions about these terms? Reach us at
-<a href="mailto:loomex.co@gmail.com">loomex.co@gmail.com</a>.</p>
-"""
-    return legal_page("Terms of Service", body, categories, cart_count, subcategories=subcategories,
-                      description="Terms of Service for shopping with Loomex.",
-                      path="/terms")
-
-
 def privacy_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
     body = """
 <p>This page explains what information Loomex collects when you shop with
@@ -1086,6 +1108,7 @@ ERROR_CSS = """
 
 
 def error_page(categories: list, cart_count: int = 0, subcategories: dict | None = None,
+               
                 status_code: int = 404, message: str | None = None) -> str:
     message = message or "That page doesn't exist — it may have been moved or the link is out of date."
     body = f"""
@@ -1100,3 +1123,129 @@ def error_page(categories: list, cart_count: int = 0, subcategories: dict | None
 """
     title = "Page not found" if status_code == 404 else "Something went wrong"
     return layout(title, body, categories, cart_count, subcategories=subcategories)
+RETURNS_CSS = """
+<style>
+.rt { max-width: 620px; margin: 0 auto; padding: 34px 18px 60px; }
+.rt-eyebrow { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; }
+.rt-title { font-size: 40px; margin: 0 0 14px; color: var(--paper); }
+.rt-lead { color: var(--paper-dim); font-size: 15px; line-height: 1.6; margin: 0 0 26px; max-width: 46ch; }
+
+.rt-glance { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
+.rt-stat { background: var(--ink-raised); border: 1px solid var(--line); padding: 16px 10px; text-align: center; }
+.rt-stat strong {
+  display: block; font-family: "Big Shoulders Display", sans-serif; font-size: 22px;
+  text-transform: uppercase; color: var(--gold); line-height: 1; margin-bottom: 8px; letter-spacing: 0.02em;
+}
+.rt-stat span { display: block; font-size: 11.5px; color: var(--paper-dim); line-height: 1.4; }
+
+.rt-card { background: var(--ink-raised); border: 1px solid var(--line); padding: 20px 18px; margin-bottom: 12px; }
+.rt-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.rt-num {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--gold);
+  color: var(--gold); display: flex; align-items: center; justify-content: center;
+  font-family: "Big Shoulders Display", sans-serif; font-size: 16px; font-weight: 700;
+}
+.rt-card h2 { margin: 0; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--paper); font-weight: 600; }
+.rt-card p { margin: 0 0 10px; color: var(--paper-dim); font-size: 14px; line-height: 1.7; }
+.rt-card p:last-child { margin-bottom: 0; }
+.rt-card strong { color: var(--paper); }
+.rt-card a { color: var(--gold); text-decoration: underline; }
+.rt-note {
+  border-left: 2px solid var(--gold); background: rgba(199, 154, 70, 0.08);
+  padding: 12px 14px; margin-top: 14px; color: var(--paper-dim); font-size: 13.5px; line-height: 1.65;
+}
+.rt-note strong { color: var(--gold); }
+
+.rt-refund {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13.5px;
+}
+.rt-refund:last-child { border-bottom: none; padding-bottom: 0; }
+.rt-refund span:first-child { color: var(--paper-dim); }
+.rt-refund span:last-child { color: var(--paper); font-weight: 600; text-align: right; }
+
+.rt-start { border-color: var(--gold); }
+.rt-steps { list-style: none; margin: 0 0 6px; padding: 0; counter-reset: step; }
+.rt-steps li {
+  position: relative; counter-increment: step; padding: 2px 0 16px 40px;
+  color: var(--paper-dim); font-size: 14px; line-height: 1.65;
+}
+.rt-steps li::before {
+  content: counter(step); position: absolute; left: 0; top: 0; width: 26px; height: 26px;
+  border-radius: 50%; border: 1px solid var(--gold); color: var(--gold);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+}
+.rt-contact { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.rt-contact .btn {
+  display: flex; align-items: center; justify-content: center; min-height: 48px;
+  padding: 12px 10px; font-size: 13px; color: var(--ink); text-decoration: none;
+}
+.rt-handle { text-align: center; color: var(--paper-dim); font-size: 12px; margin: 12px 0 0 !important; }
+
+@media (min-width: 560px) { .rt-title { font-size: 52px; } }
+</style>
+"""
+
+
+def returns_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+    body = RETURNS_CSS + """
+<div class="rt">
+  <p class="rt-eyebrow">Loomex support</p>
+  <h1 class="rt-title display">Returns &amp; Exchanges</h1>
+  <p class="rt-lead">We want you to be happy with your order. If something isn't right,
+  here's exactly how returns and exchanges work.</p>
+
+  <div class="rt-glance">
+    <div class="rt-stat"><strong>7 days</strong><span>from the day it's delivered</span></div>
+    <div class="rt-stat"><strong>As received</strong><span>same condition, ideally boxed</span></div>
+    <div class="rt-stat"><strong>Same method</strong><span>refunded how you paid</span></div>
+  </div>
+
+  <section class="rt-card">
+    <div class="rt-card-head"><span class="rt-num">1</span><h2>Return window</h2></div>
+    <p>You have <strong>7 days from the date your order is delivered</strong> to
+    request a return or exchange.</p>
+  </section>
+
+  <section class="rt-card">
+    <div class="rt-card-head"><span class="rt-num">2</span><h2>Condition</h2></div>
+    <p>The item must be in <strong>exactly the condition you received it in</strong>,
+    and preferably with its original packaging too.</p>
+  </section>
+
+  <section class="rt-card">
+    <div class="rt-card-head"><span class="rt-num">3</span><h2>Return shipping</h2></div>
+    <p>Return shipping is <strong>paid by the customer</strong>.</p>
+    <div class="rt-note">
+      <strong>The one exception is a defect.</strong> If your item had a defect when you
+      received it, you won't pay for return shipping. Send us clear photos of the defect
+      as proof on <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener">Instagram</a>
+      or by <a href="mailto:loomex.co@gmail.com">email</a>.
+    </div>
+  </section>
+
+  <section class="rt-card">
+    <div class="rt-card-head"><span class="rt-num">4</span><h2>Refunds</h2></div>
+    <div class="rt-refund"><span>You paid with cash</span><span>Refunded in cash</span></div>
+    <div class="rt-refund"><span>You paid with InstaPay or wallet</span><span>Refunded by InstaPay or wallet</span></div>
+  </section>
+
+  <section class="rt-card rt-start">
+    <div class="rt-card-head"><span class="rt-num">&#10003;</span><h2>How to start a return</h2></div>
+    <ol class="rt-steps">
+      <li>Message us on Instagram, or send us an email.</li>
+      <li>Include your order number and the reason for the return, plus photos if the item arrived with a defect.</li>
+      <li>We'll reply and walk you through the next steps.</li>
+    </ol>
+    <div class="rt-contact">
+      <a class="btn" href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener">Instagram</a>
+      <a class="btn" href="mailto:loomex.co@gmail.com">Email us</a>
+    </div>
+    <p class="rt-handle">@loomex_clothing &nbsp;·&nbsp; loomex.co@gmail.com</p>
+  </section>
+</div>
+"""
+    return layout("Returns & Exchanges", body, categories, cart_count, subcategories=subcategories,
+                  description="Loomex returns and exchanges: 7-day window, item condition, return shipping, refunds and how to start a return.",
+                  path="/returns")
+

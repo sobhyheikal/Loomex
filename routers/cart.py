@@ -1,11 +1,45 @@
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import templates
 from config import CATEGORIES, SUBCATEGORIES
 from services.cart import get_cart, save_cart, cart_item_count, resolve_cart
 
 router = APIRouter()
+
+
+def _wants_json(request: Request) -> bool:
+    # The cart drawer's JS sends this header; normal form posts don't.
+    return request.headers.get("x-requested-with") == "fetch"
+
+
+def _drawer_payload(cart: list[dict]) -> dict:
+    lines, subtotal = resolve_cart(cart)
+    return {
+        "count": cart_item_count(cart),
+        "subtotal": subtotal,
+        "lines": [
+            {
+                "index": l["index"],
+                "name": l["name"],
+                "variant": " · ".join(v for v in [l["size"], l["color"]] if v),
+                "image_url": l["image_url"] or "",
+                "qty": l["qty"],
+                "line_total": l["line_total"],
+            }
+            for l in lines
+        ],
+    }
+
+
+def _respond(request: Request, cart: list[dict]):
+    """Drawer requests get the updated cart as JSON; plain form posts redirect to /cart."""
+    if _wants_json(request):
+        resp = JSONResponse(_drawer_payload(cart), headers={"Cache-Control": "no-store"})
+    else:
+        resp = RedirectResponse(url="/cart", status_code=303)
+    save_cart(resp, cart)
+    return resp
 
 
 # ----------------------------------------------------------------- cart ----
@@ -27,9 +61,12 @@ def add_to_cart(
     else:
         cart.append({"slug": product, "size": size, "color": color, "qty": qty})
 
-    resp = RedirectResponse(url="/cart", status_code=303)
-    save_cart(resp, cart)
-    return resp
+    return _respond(request, cart)
+
+
+@router.get("/cart/drawer")
+def cart_drawer(request: Request):
+    return JSONResponse(_drawer_payload(get_cart(request)), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/cart", response_class=HTMLResponse)
@@ -46,9 +83,7 @@ def update_cart_line(request: Request, index: int = Form(...), qty: int = Form(.
     qty = max(1, min(qty, 10))
     if 0 <= index < len(cart):
         cart[index]["qty"] = qty
-    resp = RedirectResponse(url="/cart", status_code=303)
-    save_cart(resp, cart)
-    return resp
+    return _respond(request, cart)
 
 
 @router.post("/cart/remove")
@@ -56,6 +91,4 @@ def remove_cart_line(request: Request, index: int = Form(...)):
     cart = get_cart(request)
     if 0 <= index < len(cart):
         cart.pop(index)
-    resp = RedirectResponse(url="/cart", status_code=303)
-    save_cart(resp, cart)
-    return resp
+    return _respond(request, cart)

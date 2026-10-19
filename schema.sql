@@ -15,7 +15,9 @@ create table products (
   sizes text[] not null default '{"S","M","L","XL"}',
   colors text[] not null default '{}',
   image_url text,
-  color_images jsonb not null default '{}'::jsonb,  -- e.g. {"Black": "https://...", "Olive": "https://..."}
+  color_images jsonb not null default '{}'::jsonb,  -- front photos per color, e.g. {"Black": "https://...", "Olive": "https://..."}
+  back_image_url text,                               -- back photo (tops and pants only)
+  back_color_images jsonb not null default '{}'::jsonb,  -- back photos per color, same shape as color_images
   in_stock boolean not null default true,
   created_at timestamptz not null default now()
 );
