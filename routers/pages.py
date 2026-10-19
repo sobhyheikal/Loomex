@@ -13,7 +13,11 @@ router = APIRouter()
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
     cart_count = cart_item_count(get_cart(request))
-    return templates.landing_page(CATEGORIES, cart_count, subcategories=SUBCATEGORIES)
+    try:
+        products, _ = list_shop_products(None, None, CATEGORIES, SUBCATEGORIES, search=None)
+    except Exception:
+        products = []
+    return templates.landing_page(CATEGORIES, cart_count, subcategories=SUBCATEGORIES, products=products)
 
 
 @router.get("/shop", response_class=HTMLResponse)

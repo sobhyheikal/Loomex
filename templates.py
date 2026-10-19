@@ -284,8 +284,311 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 </body>
 </html>"""
 
+HOME_CSS = """
+<style>
+.hp { overflow-x: hidden; }
+.hp-wrap { max-width: var(--max); margin: 0 auto; padding: 0 18px; }
 
-def landing_page(categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+@keyframes hp-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.hp-rise { animation: hp-rise 0.7s ease both; }
+.hp-rise.d1 { animation-delay: 0.08s; }
+.hp-rise.d2 { animation-delay: 0.18s; }
+.hp-rise.d3 { animation-delay: 0.28s; }
+
+/* hero */
+.hp-hero { padding: 44px 0 46px; }
+.hp-hero-grid { display: grid; gap: 40px; align-items: center; }
+.hp-eyebrow {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 14px;
+  font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold);
+}
+.hp-eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--gold); }
+.hp-title { font-size: clamp(58px, 17vw, 118px); margin: 0 0 18px; color: var(--paper); }
+.hp-title em { font-style: normal; color: var(--gold); }
+.hp-lead { color: var(--paper-dim); font-size: 15.5px; line-height: 1.6; max-width: 38ch; margin: 0 0 26px; }
+.hp-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.hp-cta .btn { display: inline-block; width: auto; min-width: 150px; padding: 15px 26px; text-decoration: none; }
+.hp-cta .btn.hp-ghost { background: transparent; color: var(--paper); border: 1px solid var(--paper-dim); }
+.hp-cta .btn.hp-ghost:hover { background: transparent; border-color: var(--gold); color: var(--gold); }
+
+.hp-visual { position: relative; display: block; width: 100%; max-width: 380px; margin: 0 auto; }
+.hp-visual::before { content: ""; position: absolute; inset: 14px -14px -14px 14px; border: 1px solid var(--gold); }
+.hp-visual-frame { position: relative; aspect-ratio: 4/5; background: rgba(128, 128, 128, 0.12); overflow: hidden; }
+.hp-visual-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.hp-visual-tag {
+  position: absolute; left: 12px; bottom: 12px; padding: 8px 12px; z-index: 2;
+  background: var(--ink); border: 1px solid var(--line); font-size: 12px; letter-spacing: 0.03em; color: var(--paper);
+}
+.hp-visual-tag strong { color: var(--gold); font-weight: 600; }
+
+/* ticker */
+.hp-marquee { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; background: var(--ink-raised); }
+.hp-marquee-track { display: flex; width: max-content; animation: hp-scroll 32s linear infinite; }
+.hp-marquee-set { display: flex; align-items: center; flex-shrink: 0; }
+.hp-marquee span {
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 18px;
+  text-transform: uppercase; letter-spacing: 0.14em; padding: 14px 0; white-space: nowrap; color: var(--paper);
+}
+.hp-marquee i { color: var(--gold); font-style: normal; padding: 0 22px; }
+@keyframes hp-scroll { to { transform: translateX(-50%); } }
+
+/* sections */
+.hp-section { padding: 56px 0 0; }
+.hp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+.hp-kicker { font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin: 0 0 8px; }
+.hp-h2 { font-size: 38px; margin: 0; color: var(--paper); }
+.hp-more { color: var(--paper-dim); font-size: 13px; text-decoration: underline; white-space: nowrap; padding-bottom: 4px; }
+.hp-more:hover { color: var(--gold); }
+
+.hp-cats {
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  margin: 0 -18px; padding: 0 18px 4px; scroll-padding-left: 18px;
+}
+.hp-cats::-webkit-scrollbar { display: none; }
+.hp-cats .hp-cat { flex: 0 0 62%; max-width: 240px; scroll-snap-align: start; }
+.hp-head-right { display: flex; align-items: center; gap: 16px; }
+.hp-arrows { display: none; gap: 8px; }
+.hp-arrow {
+  width: 38px; height: 38px; border: 1px solid var(--line); background: transparent;
+  color: var(--paper); border-radius: 50%; font-size: 20px; line-height: 1; cursor: pointer; padding: 0;
+}
+.hp-arrow:hover { border-color: var(--gold); color: var(--gold); }
+.hp-cat { display: block; background: var(--ink-raised); border: 1px solid var(--line); transition: border-color 0.2s ease; }
+.hp-cat:hover { border-color: var(--gold); }
+.hp-cat-img { aspect-ratio: 4/5; background: rgba(128, 128, 128, 0.10); overflow: hidden; }
+.hp-cat-img img { width: 100%; height: 100%; object-fit: contain; display: block; transition: transform 0.4s ease; }
+.hp-cat:hover .hp-cat-img img { transform: scale(1.04); }
+.hp-cat-img.empty {
+  background-image: repeating-linear-gradient(90deg, var(--line) 0px, var(--line) 1px, transparent 1px, transparent 14px);
+}
+.hp-cat-label {
+  display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 20px;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--paper);
+}
+.hp-cat-label span:last-child { color: var(--gold); }
+
+.hp-products { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hp-card { display: block; }
+.hp-card-img { aspect-ratio: 4/5; background: rgba(128, 128, 128, 0.10); border: 1px solid var(--line); overflow: hidden; }
+.hp-card-img img { width: 100%; height: 100%; object-fit: contain; display: block; transition: transform 0.4s ease; }
+.hp-card:hover .hp-card-img img { transform: scale(1.04); }
+.hp-card-name { font-size: 13.5px; margin: 10px 0 2px; color: var(--paper); }
+.hp-card-price { font-size: 13px; color: var(--gold); font-weight: 600; margin: 0; }
+
+/* light band */
+.hp-band { background: var(--stone); color: var(--ink-on-stone); margin-top: 64px; padding: 56px 0 60px; }
+.hp-band .hp-kicker { color: var(--ink-dim-on-stone); }
+.hp-band .hp-h2 { color: var(--ink-on-stone); }
+.hp-values { display: grid; gap: 26px; margin-top: 28px; }
+.hp-value { border-top: 1px solid var(--stone-line); padding-top: 16px; }
+.hp-value-num { font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.1em; color: var(--gold-dim); }
+.hp-value h3 {
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 26px;
+  text-transform: uppercase; letter-spacing: 0.02em; margin: 6px 0 8px; color: var(--ink-on-stone);
+}
+.hp-value p { margin: 0; color: var(--ink-dim-on-stone); font-size: 14px; line-height: 1.65; }
+
+/* trust strip */
+.hp-trust { display: grid; border: 1px solid var(--line); margin-top: 56px; }
+.hp-trust > div { padding: 20px 18px; border-bottom: 1px solid var(--line); }
+.hp-trust > div:last-child { border-bottom: none; }
+.hp-trust strong { display: block; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.hp-trust span { font-size: 13.5px; color: var(--paper-dim); line-height: 1.55; }
+
+/* closing call to action */
+.hp-final { text-align: center; padding: 72px 0 30px; }
+.hp-final h2 { font-size: clamp(50px, 14vw, 100px); margin: 0 0 12px; color: var(--paper); }
+.hp-final h2 em { font-style: normal; color: var(--gold); }
+.hp-final p { color: var(--paper-dim); font-size: 15px; margin: 0 auto 26px; max-width: 34ch; line-height: 1.6; }
+.hp-final .hp-cta { justify-content: center; }
+
+@media (min-width: 900px) {
+  .hp-wrap { max-width: var(--max-wide); padding: 0 32px; }
+  .hp-hero { padding: 80px 0 90px; }
+  .hp-hero-grid { grid-template-columns: 1.15fr 0.85fr; gap: 64px; }
+  .hp-lead { font-size: 17px; }
+  .hp-section { padding-top: 84px; }
+  .hp-h2 { font-size: 50px; }
+  .hp-cats { gap: 20px; margin: 0 -32px; padding: 0 32px 4px; scroll-padding-left: 32px; }
+  .hp-cats .hp-cat { flex-basis: 260px; }
+  .hp-arrows { display: flex; }
+  .hp-products { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .hp-band { margin-top: 90px; padding: 80px 0 84px; }
+  .hp-values { grid-template-columns: repeat(3, 1fr); gap: 44px; }
+  .hp-trust { grid-template-columns: repeat(3, 1fr); margin-top: 80px; }
+  .hp-trust > div { border-bottom: none; border-right: 1px solid var(--line); padding: 26px 24px; }
+  .hp-trust > div:last-child { border-right: none; }
+  .hp-final { padding: 110px 0 50px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hp-rise, .hp-marquee-track { animation: none; }
+}
+</style>
+"""
+HOME_JS = """
+<script>
+function hpScroll(dir) {
+  var row = document.getElementById('hp-cats');
+  if (!row) return;
+  var tile = row.querySelector('.hp-cat');
+  var step = (tile ? tile.getBoundingClientRect().width : 260) + 20;
+  row.scrollBy({ left: dir * step * 2, behavior: 'smooth' });
+}
+</script>
+"""
+def _home_image(p: dict) -> str:
+    """First photo of the product: first color's first image, else the main image."""
+    color_images = p.get("color_images") or {}
+    for c in p.get("colors") or []:
+        v = color_images.get(c)
+        if isinstance(v, list) and v:
+            return v[0]
+        if isinstance(v, str) and v:
+            return v
+    return p.get("image_url") or ""
+
+
+def landing_page(categories: list, cart_count: int = 0, subcategories: dict | None = None,
+                 products: list | None = None) -> str:
+    products = products or []
+    with_img = [(p, _home_image(p)) for p in products if _home_image(p)]
+    real = [(p, u) for p, u in with_img if "placehold.co" not in u]
+    pool = real or with_img  # prefer real photos, never placeholders unless that's all there is
+
+    # hero visual
+    hero_visual = ""
+    if pool:
+        hp, hu = pool[0]
+        hero_visual = (
+            f'<a href="/product/{escape(hp["slug"])}" class="hp-visual hp-rise d2">'
+            f'<div class="hp-visual-frame"><img src="{escape(hu)}" alt="{escape(hp["name"])}"></div>'
+            f'<span class="hp-visual-tag"><strong>{escape(hp["name"])}</strong> &middot; {hp["price"]:.0f} EGP</span>'
+            f'</a>'
+        )
+
+    # ticker
+    words = ["Heavyweight cotton", "Homewear", "Woven for rest", "Made to be worn in"] * 2
+    ticker_set = "".join(f"<span>{w}</span><i>&#10022;</i>" for w in words)
+    ticker = (
+        f'<div class="hp-marquee" aria-hidden="true"><div class="hp-marquee-track">'
+        f'<div class="hp-marquee-set">{ticker_set}</div><div class="hp-marquee-set">{ticker_set}</div>'
+        f'</div></div>'
+    )
+
+    # category tiles
+    tiles = []
+    for c in categories:
+        label = c.replace("-", " ").title()
+        img = next((u for p, u in pool if p.get("category") == c), "")
+        if img:
+            media = f'<div class="hp-cat-img"><img src="{escape(img)}" alt="{escape(label)}" loading="lazy"></div>'
+        else:
+            media = '<div class="hp-cat-img empty"></div>'
+        tiles.append(
+            f'<a href="/shop?category={escape(c)}" class="hp-cat">{media}'
+            f'<div class="hp-cat-label"><span>{escape(label)}</span><span>&rarr;</span></div></a>'
+        )
+    cats_html = f'<div class="hp-cats" id="hp-cats">{"".join(tiles)}</div>'
+
+    # new arrivals
+    featured = pool[1:5] if len(pool) > 4 else pool[:4]
+    cards = [
+        f'<a href="/product/{escape(p["slug"])}" class="hp-card">'
+        f'<div class="hp-card-img"><img src="{escape(u)}" alt="{escape(p["name"])}" loading="lazy"></div>'
+        f'<p class="hp-card-name">{escape(p["name"])}</p>'
+        f'<p class="hp-card-price">{p["price"]:.0f} EGP</p></a>'
+        for p, u in featured
+    ]
+    featured_html = ""
+    if cards:
+        featured_html = f"""
+  <section class="hp-section">
+    <div class="hp-wrap">
+      <div class="hp-head">
+               <div><p class="hp-kicker">The collection</p><h2 class="hp-h2 display">Shop by category</h2></div>
+        <div class="hp-head-right">
+          <div class="hp-arrows">
+            <button type="button" class="hp-arrow" onclick="hpScroll(-1)" aria-label="Previous categories">&#8249;</button>
+            <button type="button" class="hp-arrow" onclick="hpScroll(1)" aria-label="Next categories">&#8250;</button>
+          </div>
+          <a href="/shop" class="hp-more">Shop all</a>
+        </div>
+      </div>
+      <div class="hp-products">{"".join(cards)}</div>
+    </div>
+  </section>"""
+
+    body = HOME_CSS + f"""
+<div class="hp">
+  <section class="hp-hero warp-bg">
+    <div class="hp-wrap">
+      <div class="hp-hero-grid">
+        <div>
+          <p class="hp-eyebrow hp-rise">Homewear, basic by design</p>
+          <h1 class="hp-title display hp-rise d1">Made to be<br><em>worn in.</em></h1>
+          <p class="hp-lead hp-rise d2">Heavyweight cotton essentials &mdash; tops, joggers, pullovers, quarter-zips
+          and jackets built for the hours that don't need an outfit.</p>
+          <div class="hp-cta hp-rise d3">
+            <a href="/shop" class="btn">Shop Now</a>
+            <a href="#categories" class="btn hp-ghost">Shop by category</a>
+          </div>
+        </div>
+        {hero_visual}
+      </div>
+    </div>
+  </section>
+
+  {ticker}
+
+  <section class="hp-section" id="categories">
+    <div class="hp-wrap">
+      <div class="hp-head">
+        <div><p class="hp-kicker">The collection</p><h2 class="hp-h2 display">Shop by category</h2></div>
+        <a href="/shop" class="hp-more">Shop all</a>
+      </div>
+      {cats_html}
+    </div>
+  </section>
+  {featured_html}
+
+  <section class="hp-band">
+    <div class="hp-wrap">
+      <p class="hp-kicker">Why Loomex</p>
+      <h2 class="hp-h2 display">Woven for rest</h2>
+      <div class="hp-values">
+        <div class="hp-value"><span class="hp-value-num">01</span><h3>Heavyweight cotton</h3>
+          <p>Fabric with real weight, made for slow mornings and long evenings.</p></div>
+        <div class="hp-value"><span class="hp-value-num">02</span><h3>Basic by design</h3>
+          <p>Clean, simple cuts in colors that go with everything.</p></div>
+        <div class="hp-value"><span class="hp-value-num">03</span><h3>Made to layer</h3>
+          <p>Tops, pullovers, quarter-zips and jackets that work together.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="hp-wrap">
+    <div class="hp-trust">
+      <div><strong>Pay your way</strong><span>Cash on delivery, InstaPay or e-wallet at checkout.</span></div>
+      <div><strong>7-day returns</strong><span>Start a return within 7 days of delivery. It's all in the Return Policy.</span></div>
+      <div><strong>Here to help</strong><span>Questions about an order or sizing? Message us on Instagram or by email.</span></div>
+    </div>
+
+    <section class="hp-final">
+      <h2 class="display">Wear it <em>in.</em></h2>
+      <p>Heavyweight cotton homewear for the hours that don't need an outfit.</p>
+      <div class="hp-cta">
+        <a href="/shop" class="btn">Shop Loomex</a>
+        <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener" class="btn hp-ghost">Follow @loomex_clothing</a>
+      </div>
+    </section>
+  </div>
+</div>
+"""
+    body += HOME_JS
+    return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories, path="/")
+
     body = """
 <section class="hero warp-bg">
   <div class="wrap">
