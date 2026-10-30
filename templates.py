@@ -455,7 +455,7 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     products = products or []
     with_img = [(p, _home_image(p)) for p in products if _home_image(p)]
     real = [(p, u) for p, u in with_img if "placehold.co" not in u]
-    pool = real or with_img  # prefer real photos, never placeholders unless that's all there is
+    pool = real or with_img  # prefer real photos, placeholders only if that's all there is
 
     # hero visual
     hero_visual = ""
@@ -507,14 +507,8 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
   <section class="hp-section">
     <div class="hp-wrap">
       <div class="hp-head">
-               <div><p class="hp-kicker">The collection</p><h2 class="hp-h2 display">Shop by category</h2></div>
-        <div class="hp-head-right">
-          <div class="hp-arrows">
-            <button type="button" class="hp-arrow" onclick="hpScroll(-1)" aria-label="Previous categories">&#8249;</button>
-            <button type="button" class="hp-arrow" onclick="hpScroll(1)" aria-label="Next categories">&#8250;</button>
-          </div>
-          <a href="/shop" class="hp-more">Shop all</a>
-        </div>
+        <div><p class="hp-kicker">Just in</p><h2 class="hp-h2 display">New arrivals</h2></div>
+        <a href="/shop" class="hp-more">Shop all</a>
       </div>
       <div class="hp-products">{"".join(cards)}</div>
     </div>
@@ -546,7 +540,13 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     <div class="hp-wrap">
       <div class="hp-head">
         <div><p class="hp-kicker">The collection</p><h2 class="hp-h2 display">Shop by category</h2></div>
-        <a href="/shop" class="hp-more">Shop all</a>
+        <div class="hp-head-right">
+          <div class="hp-arrows">
+            <button type="button" class="hp-arrow" onclick="hpScroll(-1)" aria-label="Previous categories">&#8249;</button>
+            <button type="button" class="hp-arrow" onclick="hpScroll(1)" aria-label="Next categories">&#8250;</button>
+          </div>
+          <a href="/shop" class="hp-more">Shop all</a>
+        </div>
       </div>
       {cats_html}
     </div>
@@ -587,20 +587,10 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
 </div>
 """
     body += HOME_JS
-    return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories, path="/")
+    return layout("Loomex — Homewear", body, categories, cart_count,
+                  subcategories=subcategories, path="/")
 
-    body = """
-<section class="hero warp-bg">
-  <div class="wrap">
-    <p class="eyebrow">Homewear, basic by design</p>
-    <h1 class="display">Made to be<br>worn in.</h1>
-    <p>Heavyweight cotton essentials — tops, joggers, pullovers, quarter-zips
-    and jackets built for the hours that don't need an outfit.</p>
-    <a href="/shop" class="btn" style="margin-top:24px;max-width:220px;">Shop Loomex</a>
-  </div>
-</section>
-"""
-    return layout("Loomex — Homewear", body, categories, cart_count, subcategories=subcategories, path="/")
+
 SHOP_CSS = """
 <style>
 .search-form{display:flex;align-items:center;gap:8px;padding:18px 18px 0;max-width:var(--max);margin:0 auto;}
@@ -1551,4 +1541,3 @@ def returns_page(categories: list, cart_count: int = 0, subcategories: dict | No
     return layout("Returns & Exchanges", body, categories, cart_count, subcategories=subcategories,
                   description="Loomex returns and exchanges: 7-day window, item condition, return shipping, refunds and how to start a return.",
                   path="/returns")
-
