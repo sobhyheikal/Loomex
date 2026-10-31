@@ -834,7 +834,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
     if color_images:
         groups = []
-        labeled = p.get("category") in ("tops", "tank-tops", "pants")
+        labeled = True
 
         def _label(n):
             return ("Front", "Back")[n] if labeled and n < 2 else ""

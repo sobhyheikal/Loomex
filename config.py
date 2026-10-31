@@ -2,8 +2,8 @@
 Shared app configuration/constants, used by routers and services.
 """
 
-CATEGORIES = ["tops", "tank-tops", "pants", "pullovers", "quarter-zips", "jackets"]
-SUBCATEGORIES = {"pants": ["joggers", "checkered-pants"]}
+CATEGORIES = ["tops", "tank-tops", "pants", "hoodies", "sweatshirts", "jackets"]
+SUBCATEGORIES = {"pants": ["sweatpants", "pijama-pants"]}
 CART_COOKIE = "loomex_cart"
 
 # Your live domain once deployed, e.g. "https://loomex.vercel.app" or
