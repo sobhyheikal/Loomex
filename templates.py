@@ -553,11 +553,12 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     </picture></div>
     <div class="hp-wrap">
       <div class="hp-hero-copy">
-        <p class="hp-eyebrow hp-rise">Homewear, basic by design</p>
-        <h1 class="hp-title display hp-rise d1">Made to be<br><em>worn in.</em></h1>
-        <p class="hp-lead hp-rise d2">Heavyweight essentials. Effortless comfort. Built for everyday wear.</p>
+        <p class="hp-eyebrow hp-rise">Built around your everyday.</p>
+        <h1 class="hp-title display hp-rise d1">BASICALLY
+<br><em>UNBASIC</em></h1>
+       
         <div class="hp-cta hp-rise d3">
-          <a href="/shop" class="btn">Shop the collection &rarr;</a>
+          <a href="/shop" class="btn">Shop our collection &rarr;</a>
           <a href="#categories" class="btn hp-ghost">Explore categories</a>
         </div>
       </div>
