@@ -310,14 +310,44 @@ HOME_CSS = """
 .hp-cta .btn { display: inline-block; width: auto; min-width: 150px; padding: 15px 26px; text-decoration: none; }
 .hp-cta .btn.hp-ghost { background: transparent; color: var(--paper); border: 1px solid var(--paper-dim); }
 .hp-cta .btn.hp-ghost:hover { background: transparent; border-color: var(--gold); color: var(--gold); }
-
-.hp-visual { position: relative; display: block; width: 100%; max-width: 380px; margin: 0 auto; }
-.hp-visual::before { content: ""; position: absolute; inset: 14px -14px -14px 14px; border: 1px solid var(--gold); }
-.hp-visual-frame { position: relative; aspect-ratio: 4/5; background: rgba(128, 128, 128, 0.12); overflow: hidden; }
-.hp-visual-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.hp-visual-tag {
-  position: absolute; left: 12px; bottom: 12px; padding: 8px 12px; z-index: 2;
-  background: var(--ink); border: 1px solid var(--line); font-size: 12px; letter-spacing: 0.03em; color: var(--paper);
+/* hero over banner */
+.hp-hero { position: relative; isolation: isolate; display: flex; align-items: flex-end;
+  min-height: min(88vh, 720px); padding: 0; overflow: hidden; }
+.hp-hero-bg { position: absolute; inset: 0; z-index: -2; }
+.hp-hero-bg img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.hp-hero::after { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, rgba(18,15,12,.94) 0%, rgba(18,15,12,.6) 42%, rgba(18,15,12,.12) 100%); }
+.hp-hero .hp-wrap { box-sizing: border-box; width: 100%; padding-top: 120px; padding-bottom: 44px; }
+.hp-hero-copy { max-width: 560px; }
+.hp-hero .hp-title { color: #f5f0e8; text-shadow: 0 2px 24px rgba(0,0,0,.45); }
+.hp-hero .hp-lead { color: #e4ddd1; text-shadow: 0 1px 12px rgba(0,0,0,.5); }
+.hp-hero .hp-cta .btn.hp-ghost { color: #f5f0e8; border-color: rgba(245,240,232,.7); background: rgba(18,15,12,.25); }
+@media (min-width: 900px) {
+  .hp-hero { min-height: min(84vh, 760px); }
+  .hp-hero::after { background: linear-gradient(to right, rgba(18,15,12,.92) 0%, rgba(18,15,12,.62) 40%, rgba(18,15,12,.08) 75%); }
+  .hp-hero .hp-wrap { padding-bottom: 90px; }
+}
+@media (max-width: 699px) {
+  /* the image sets the height; a dark band above it (--hero-extra) holds the text, and the photo fades into it.
+     If your image has the logo/cart baked into its top edge, set --hero-crop to that height (about 11vw). */
+  .hp-hero { --hero-crop: 0px; --hero-extra: 22vw; display: block; min-height: 0; padding: 0; background: var(--ink); }
+  .hp-hero::after { display: none; }
+  .hp-hero-bg { position: relative; inset: auto; z-index: 0; overflow: hidden; margin-top: var(--hero-extra); }
+  .hp-hero-bg img { display: block; width: 100%; height: auto; margin-top: calc(var(--hero-crop) * -1); }
+  .hp-hero-bg::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(to bottom, var(--ink) 0, rgba(33,30,26,.72) 12vw, rgba(33,30,26,0) 34vw); }
+  .hp-hero .hp-wrap { position: absolute; top: 0; left: 0; right: 0; z-index: 1; padding: 5vw 18px 0; text-align: center; }
+  .hp-hero-copy { margin: 0 auto; max-width: none; }
+  .hp-eyebrow { justify-content: center; gap: 2.6vw; font-size: max(10.5px, 2.8vw); letter-spacing: 0.2em; margin: 0 0 1.6vw; }
+  .hp-eyebrow::before, .hp-eyebrow::after { content: ""; flex: 1 1 0; max-width: 20vw; height: 1px; background: var(--gold); }
+  .hp-hero .hp-title { font-size: 14vw; line-height: 0.9; margin: 0 0 2.6vw; white-space: nowrap; }
+  .hp-hero .hp-lead { font-size: max(12.5px, 3.3vw); line-height: 1.45; max-width: 66vw; margin: 0 auto 3.4vw; letter-spacing: 0.02em; }
+  .hp-hero .hp-cta { flex-direction: column; align-items: center; gap: 2vw; }
+  .hp-hero .hp-cta .btn { width: 56vw; min-width: 0; padding: 0; height: max(38px, 10vw); line-height: max(38px, 10vw);
+    font-size: max(12px, 3.2vw); text-align: center; }
+}
+}
+}
 }
 .hp-visual-tag strong { color: var(--gold); font-weight: 600; }
 
@@ -406,8 +436,6 @@ HOME_CSS = """
 
 @media (min-width: 900px) {
   .hp-wrap { max-width: var(--max-wide); padding: 0 32px; }
-  .hp-hero { padding: 80px 0 90px; }
-  .hp-hero-grid { grid-template-columns: 1.15fr 0.85fr; gap: 64px; }
   .hp-lead { font-size: 17px; }
   .hp-section { padding-top: 84px; }
   .hp-h2 { font-size: 50px; }
@@ -456,7 +484,9 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     with_img = [(p, _home_image(p)) for p in products if _home_image(p)]
     real = [(p, u) for p, u in with_img if "placehold.co" not in u]
     pool = real or with_img  # prefer real photos, placeholders only if that's all there is
-
+    # hero banner
+    HERO_BANNER = "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/product_images/hero%20section/banner%20img.jpeg"
+    HERO_BANNER_MOBILE = "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/product_images/hero%20section/banner%20image%20portrait.jpeg"
     # hero visual
     hero_visual = ""
     if pool:
@@ -516,20 +546,20 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
 
     body = HOME_CSS + f"""
 <div class="hp">
-  <section class="hp-hero warp-bg">
+   <section class="hp-hero">
+    <div class="hp-hero-bg"><picture>
+      <source media="(max-width: 699px)" srcset="{escape(HERO_BANNER_MOBILE)}">
+      <img src="{escape(HERO_BANNER)}" alt="Loomex homewear" fetchpriority="high">
+    </picture></div>
     <div class="hp-wrap">
-      <div class="hp-hero-grid">
-        <div>
-          <p class="hp-eyebrow hp-rise">Homewear, basic by design</p>
-          <h1 class="hp-title display hp-rise d1">Made to be<br><em>worn in.</em></h1>
-          <p class="hp-lead hp-rise d2">Heavyweight cotton essentials &mdash; tops, joggers, pullovers, quarter-zips
-          and jackets built for the hours that don't need an outfit.</p>
-          <div class="hp-cta hp-rise d3">
-            <a href="/shop" class="btn">Shop Now</a>
-            <a href="#categories" class="btn hp-ghost">Shop by category</a>
-          </div>
+      <div class="hp-hero-copy">
+        <p class="hp-eyebrow hp-rise">Homewear, basic by design</p>
+        <h1 class="hp-title display hp-rise d1">Made to be<br><em>worn in.</em></h1>
+        <p class="hp-lead hp-rise d2">Heavyweight essentials. Effortless comfort. Built for everyday wear.</p>
+        <div class="hp-cta hp-rise d3">
+          <a href="/shop" class="btn">Shop the collection &rarr;</a>
+          <a href="#categories" class="btn hp-ghost">Explore categories</a>
         </div>
-        {hero_visual}
       </div>
     </div>
   </section>
@@ -551,26 +581,11 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
       {cats_html}
     </div>
   </section>
-  {featured_html}
 
-  <section class="hp-band">
-    <div class="hp-wrap">
-      <p class="hp-kicker">Why Loomex</p>
-      <h2 class="hp-h2 display">Woven for rest</h2>
-      <div class="hp-values">
-        <div class="hp-value"><span class="hp-value-num">01</span><h3>Heavyweight cotton</h3>
-          <p>Fabric with real weight, made for slow mornings and long evenings.</p></div>
-        <div class="hp-value"><span class="hp-value-num">02</span><h3>Basic by design</h3>
-          <p>Clean, simple cuts in colors that go with everything.</p></div>
-        <div class="hp-value"><span class="hp-value-num">03</span><h3>Made to layer</h3>
-          <p>Tops, pullovers, quarter-zips and jackets that work together.</p></div>
-      </div>
-    </div>
-  </section>
 
   <div class="hp-wrap">
     <div class="hp-trust">
-      <div><strong>Pay your way</strong><span>Cash on delivery, InstaPay or e-wallet at checkout.</span></div>
+      <div><strong>Pay your way</strong><span>Cash on delivery at checkout. Prefer another way to pay? Send us a DM on Instagram.</span></div>
       <div><strong>7-day returns</strong><span>Start a return within 7 days of delivery. It's all in the Return Policy.</span></div>
       <div><strong>Here to help</strong><span>Questions about an order or sizing? Message us on Instagram or by email.</span></div>
     </div>
@@ -624,6 +639,8 @@ SHOP_CSS = """
 .subtab.active{color:var(--gold);background:none;box-shadow:inset 0 -2px 0 var(--gold);}
 @media (min-width:560px){.subtabs{justify-content:center;}}
 @media (min-width:900px){.subtabs{padding-left:32px;padding-right:32px;}}
+}
+
 </style>
 <script>
 function cardShowColor(el, ci){
@@ -990,6 +1007,30 @@ CHECKOUT_CSS = """
   width: 100%; margin-top: 8px; padding: 10px; border: 1px solid var(--line);
   background: var(--ink); color: var(--paper); font-size: 13px; font-family: inherit;
 }
+.req { color: var(--gold); font-weight: 700; }
+.checkout-required { color: var(--paper-dim); font-size: 12.5px; margin: 0 0 14px; }
+.field-error { color: #e5806b; font-size: 12.5px; line-height: 1.4; margin: 6px 0 0; }
+.field-error[hidden] { display: none; }
+.form-group input.invalid, .form-group select.invalid { border-color: #e5806b; }
+.pay-other { color: var(--paper-dim); font-size: 13px; line-height: 1.6; margin: 10px 0 0;
+  padding: 12px 14px; border: 1px solid var(--line); background: var(--ink-raised); }
+.pay-other a { color: var(--gold); text-decoration: underline; }
+.btn-ghost { background: transparent; color: var(--paper); border: 1px solid var(--paper-dim); }
+.btn-ghost:hover { background: transparent; border-color: var(--gold); color: var(--gold); }
+.review-backdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.62); padding: 0; }
+.review-backdrop[hidden] { display: none; }
+.review-card { width: 100%; max-width: 460px; max-height: 92vh; overflow-y: auto; background: var(--ink);
+  border: 1px solid var(--line); padding: 22px 20px 20px; }
+.review-card h2 { font-size: 30px; margin: 0 0 4px; color: var(--paper); }
+.review-sub { color: var(--paper-dim); font-size: 13px; margin: 0 0 14px; }
+.review-row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.review-row span:first-child { color: var(--paper-dim); flex: 0 0 auto; }
+.review-row span:last-child { color: var(--paper); text-align: right; word-break: break-word; }
+.review-row.total span:last-child { color: var(--gold); font-weight: 700; }
+.review-actions { display: grid; gap: 10px; margin-top: 18px; }
+.review-actions .btn { width: 100%; }
+@media (min-width: 560px) { .review-backdrop { align-items: center; padding: 18px; } }
 </style>
 """
 
@@ -1003,22 +1044,16 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
             </div>"""
         for l in lines
     )
-    error_html = f'<p style="color:#a33;font-size:13px;margin-bottom:14px;">{escape(error)}</p>' if error else ""
+    error_html = f'<p style="color:#e5806b;font-size:13px;margin-bottom:14px;">{escape(error)}</p>' if error else ""
 
     city_options = "".join(
         f'<option value="{escape(city)}">{escape(city)}</option>' for city in SHIPPING_RATES
     )
     rates_json = json.dumps(SHIPPING_RATES)
 
-    payment_options = "".join(
-        f"""<label class="pay-option">
-              <input type="radio" name="payment_method" value="{key}"{' checked' if key == 'cod' else ''}
-                onchange="loomexShowPayment('{key}')">
-              <span><strong>{escape(m['label'])}</strong><span>{escape(m['description'])}</span></span>
-            </label>"""
-        for key, m in PAYMENT_METHODS.items()
-    )
-    payment_details_json = json.dumps({k: m["detail"] for k, m in PAYMENT_METHODS.items() if k != "cod"})
+    cod = PAYMENT_METHODS.get("cod", {})
+    cod_label = cod.get("label", "Cash on Delivery")
+    cod_desc = cod.get("description", "Pay in cash when your order arrives.")
 
     body = f"""
 {CHECKOUT_CSS}
@@ -1043,64 +1078,195 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
 
   {error_html}
 
-  <form action="/checkout" method="post" enctype="multipart/form-data" style="margin-top:10px;">
+  <p class="checkout-required">All fields marked <span class="req">*</span> are required.</p>
+
+  <form action="/checkout" method="post" enctype="multipart/form-data" id="checkout-form" novalidate style="margin-top:10px;">
     <div class="form-group">
-      <label>Full name</label>
-      <input type="text" name="customer_name" required>
+      <label for="f-customer_name">Full name <span class="req">*</span></label>
+      <input type="text" name="customer_name" id="f-customer_name" required maxlength="80" autocomplete="name"
+        placeholder="First and last name">
+      <p class="field-error" id="err-customer_name" hidden></p>
     </div>
     <div class="form-group">
-      <label>Phone number</label>
-      <input type="tel" name="phone" required placeholder="01xxxxxxxxx">
+      <label for="f-phone">Phone number <span class="req">*</span></label>
+      <input type="tel" name="phone" id="f-phone" required maxlength="20" inputmode="tel" autocomplete="tel"
+        placeholder="01xxxxxxxxx">
+      <p class="field-error" id="err-phone" hidden></p>
     </div>
     <div class="form-group">
-      <label>City</label>
+      <label for="city-select">City <span class="req">*</span></label>
       <select name="city" id="city-select" required onchange="loomexUpdateShipping(this.value)">
         <option value="" disabled selected>Select your city</option>
         {city_options}
       </select>
+      <p class="field-error" id="err-city" hidden></p>
     </div>
     <div class="form-group">
-      <label>Full address</label>
-      <input type="text" name="address" required>
+      <label for="f-address">Full address <span class="req">*</span></label>
+      <input type="text" name="address" id="f-address" required maxlength="200" autocomplete="street-address"
+        placeholder="Street, building number, floor, area">
+      <p class="field-error" id="err-address" hidden></p>
     </div>
 
-    <span class="field-label">Payment Method</span>
-    {payment_options}
+    <span class="field-label">Payment method <span class="req">*</span></span>
+    <label class="pay-option">
+      <input type="radio" name="payment_method" value="cod" checked>
+      <span><strong>{escape(cod_label)}</strong><span>{escape(cod_desc)}</span></span>
+    </label>
+    <p class="pay-other">
+      Want to pay another way, like InstaPay or an e-wallet? Choose <strong>{escape(cod_label)}</strong> here,
+      then send us a DM on Instagram
+      <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener">@loomex_clothing</a>
+      and we'll arrange it with you.
+    </p>
 
-    <div class="payment-proof-box" id="payment-proof-box" style="display:none;">
-      <p class="payment-proof-detail" id="payment-proof-detail"></p>
-      <label class="field-label" style="margin-top:14px;">Upload payment screenshot</label>
-      <input type="file" name="payment_proof" accept="image/*" id="payment-proof-input">
-    </div>
-
-    <button class="btn" type="submit" style="margin-top:20px;">Place Order</button>
+    <button class="btn" type="submit" id="place-order-btn" style="margin-top:20px;">Review &amp; Place Order</button>
   </form>
 </div>
+
+<div class="review-backdrop" id="review" hidden>
+  <div class="review-card" role="dialog" aria-modal="true" aria-labelledby="review-title">
+    <h2 class="display" id="review-title">Check your order</h2>
+    <p class="review-sub">Please make sure everything is correct before you place your order.</p>
+    <div id="review-rows"></div>
+    <div class="review-actions">
+      <button type="button" class="btn" id="review-confirm">Confirm &amp; place order</button>
+      <button type="button" class="btn btn-ghost" id="review-edit">Edit my details</button>
+    </div>
+  </div>
+</div>
+
 <script>
 var LOOMEX_RATES = {rates_json};
 var LOOMEX_SUBTOTAL = {subtotal:.2f};
-var LOOMEX_PAYMENT_DETAILS = {payment_details_json};
 function loomexUpdateShipping(city) {{
   var rate = LOOMEX_RATES[city];
   if (rate === undefined) return;
   document.getElementById('shipping-amount').textContent = rate.toFixed(0) + ' EGP';
   document.getElementById('total-amount').textContent = (LOOMEX_SUBTOTAL + rate).toFixed(0) + ' EGP';
   document.getElementById('shipping-hint').style.display = 'none';
+  loomexCheckCity();
 }}
-function loomexShowPayment(method) {{
-  var box = document.getElementById('payment-proof-box');
-  var input = document.getElementById('payment-proof-input');
-  var detail = LOOMEX_PAYMENT_DETAILS[method];
-  if (detail) {{
-    box.style.display = 'block';
-    input.required = true;
-    document.getElementById('payment-proof-detail').innerHTML =
-      'Send the <strong>total</strong> shown above to:<br><strong>' + detail + '</strong>';
+
+function loomexSetError(fieldId, errId, msg) {{
+  var f = document.getElementById(fieldId);
+  var e = document.getElementById(errId);
+  if (msg) {{
+    e.textContent = msg; e.hidden = false;
+    f.classList.add('invalid'); f.setAttribute('aria-invalid', 'true');
   }} else {{
-    box.style.display = 'none';
-    input.required = false;
+    e.textContent = ''; e.hidden = true;
+    f.classList.remove('invalid'); f.removeAttribute('aria-invalid');
   }}
+  return !msg;
 }}
+function loomexHasLetter(str) {{
+  for (var i = 0; i < str.length; i++) {{
+    var c = str.charAt(i), code = str.charCodeAt(i);
+    if (c.toLowerCase() !== c.toUpperCase() || (code >= 1536 && code <= 1791)) return true;
+  }}
+  return false;
+}}
+function loomexCleanName() {{
+  return document.getElementById('f-customer_name').value.trim().replace(/ +/g, ' ');
+}}
+function loomexNormPhone(raw) {{
+  var p = raw.replace(/[^0-9+]/g, '');
+  if (p.indexOf('+20') === 0) p = '0' + p.slice(3);
+  else if (p.indexOf('0020') === 0) p = '0' + p.slice(4);
+  else if (p.indexOf('20') === 0 && p.length === 12) p = '0' + p.slice(2);
+  return p;
+}}
+
+function loomexCheckName() {{
+  var v = loomexCleanName(), words = v ? v.split(' ') : [], msg = '';
+  if (!v) msg = 'Please enter your full name.';
+  else if (/[0-9]/.test(v)) msg = 'Your name should not contain numbers.';
+  else if (words.length < 2 || words.some(function (w) {{ return w.length < 2; }}))
+    msg = 'Please enter your first and last name.';
+  return loomexSetError('f-customer_name', 'err-customer_name', msg);
+}}
+function loomexCheckPhone() {{
+  var raw = document.getElementById('f-phone').value.trim(), msg = '';
+  var p = loomexNormPhone(raw);
+  if (!raw) msg = 'Please enter your phone number.';
+  else if (p.length !== 11 || !/^01[0125][0-9]+$/.test(p))
+    msg = 'Enter a valid Egyptian mobile number, like 01012345678.';
+  return loomexSetError('f-phone', 'err-phone', msg);
+}}
+function loomexCheckCity() {{
+  var msg = document.getElementById('city-select').value ? '' : 'Please select your city.';
+  return loomexSetError('city-select', 'err-city', msg);
+}}
+function loomexCheckAddress() {{
+  var v = document.getElementById('f-address').value.trim().replace(/ +/g, ' '), msg = '';
+  if (!v) msg = 'Please enter your full address.';
+  else if (v.length < 10 || !loomexHasLetter(v))
+    msg = 'Please enter your full address: street, building number and area (at least 10 characters).';
+  return loomexSetError('f-address', 'err-address', msg);
+}}
+
+var LOOMEX_CHECKS = [
+  ['f-customer_name', loomexCheckName], ['f-phone', loomexCheckPhone],
+  ['city-select', loomexCheckCity], ['f-address', loomexCheckAddress]
+];
+LOOMEX_CHECKS.forEach(function (c) {{
+  var el = document.getElementById(c[0]);
+  el.addEventListener('blur', c[1]);
+  el.addEventListener('input', function () {{ if (el.classList.contains('invalid')) c[1](); }});
+}});
+
+function loomexRow(label, value, cls) {{
+  var row = document.createElement('div');
+  row.className = 'review-row' + (cls ? ' ' + cls : '');
+  var a = document.createElement('span'); a.textContent = label;
+  var b = document.createElement('span'); b.textContent = value;
+  row.appendChild(a); row.appendChild(b);
+  return row;
+}}
+function loomexOpenReview() {{
+  var city = document.getElementById('city-select').value;
+  var rate = LOOMEX_RATES[city] || 0;
+  var rows = document.getElementById('review-rows');
+  rows.innerHTML = '';
+  rows.appendChild(loomexRow('Name', loomexCleanName()));
+  rows.appendChild(loomexRow('Phone', document.getElementById('f-phone').value));
+  rows.appendChild(loomexRow('City', city));
+  rows.appendChild(loomexRow('Address', document.getElementById('f-address').value.trim()));
+  rows.appendChild(loomexRow('Payment', 'Cash on Delivery'));
+  rows.appendChild(loomexRow('Subtotal', LOOMEX_SUBTOTAL.toFixed(0) + ' EGP'));
+  rows.appendChild(loomexRow('Shipping', rate.toFixed(0) + ' EGP'));
+  rows.appendChild(loomexRow('Total', (LOOMEX_SUBTOTAL + rate).toFixed(0) + ' EGP', 'total'));
+  document.getElementById('review').hidden = false;
+  document.getElementById('review-confirm').focus();
+}}
+function loomexCloseReview() {{ document.getElementById('review').hidden = true; }}
+
+var LOOMEX_FORM = document.getElementById('checkout-form');
+LOOMEX_FORM.addEventListener('submit', function (e) {{
+  e.preventDefault();
+  var results = LOOMEX_CHECKS.map(function (c) {{ return [c[0], c[1]()]; }});
+  var bad = results.filter(function (r) {{ return !r[1]; }});
+  if (bad.length) {{
+    var first = document.getElementById(bad[0][0]);
+    first.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+    first.focus();
+    return;
+  }}
+  // store the cleaned values so the server always gets a consistent format
+  document.getElementById('f-customer_name').value = loomexCleanName();
+  document.getElementById('f-phone').value = loomexNormPhone(document.getElementById('f-phone').value);
+  document.getElementById('f-address').value = document.getElementById('f-address').value.trim().replace(/ +/g, ' ');
+  loomexOpenReview();
+}});
+document.getElementById('review-edit').addEventListener('click', loomexCloseReview);
+document.getElementById('review').addEventListener('click', function (e) {{ if (e.target === this) loomexCloseReview(); }});
+document.addEventListener('keydown', function (e) {{ if (e.key === 'Escape') loomexCloseReview(); }});
+document.getElementById('review-confirm').addEventListener('click', function () {{
+  this.disabled = true; this.textContent = 'Placing your order...';
+  document.getElementById('review-edit').disabled = true;
+  LOOMEX_FORM.submit();
+}});
 </script>
 """
     return layout("Checkout", body, categories, cart_count, section_class="checkout", subcategories=subcategories, path="/checkout")
