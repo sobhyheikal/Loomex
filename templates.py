@@ -12,12 +12,12 @@ from config import META_PIXEL_ID, PAYMENT_METHODS, SHIPPING_RATES, SITE_URL, TIK
 FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
     '<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700&'
-    'family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
+    'family=Playfair+Display:ital,wght@0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">'
 )
 
 DEFAULT_DESCRIPTION = (
-    "Loomex — heavyweight cotton homewear. Tops, pants, pullovers, "
-    "quarter-zips and jackets built for the hours that don't need an outfit."
+    "Loomex — heavyweight cotton homewear. Tops, pants, hoodies, "
+    "sweatshirts and jackets built for the hours that don't need an outfit."
 )
 # A real product photo used as the fallback social-share image for pages
 # that aren't about one specific product (home, shop, cart, legal pages...).
@@ -346,10 +346,6 @@ HOME_CSS = """
   .hp-hero .hp-cta .btn { width: 56vw; min-width: 0; padding: 0; height: max(38px, 10vw); line-height: max(38px, 10vw);
     font-size: max(12px, 3.2vw); text-align: center; }
 }
-}
-}
-}
-.hp-visual-tag strong { color: var(--gold); font-weight: 600; }
 
 /* ticker */
 .hp-marquee { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; background: var(--ink-raised); }
@@ -428,11 +424,26 @@ HOME_CSS = """
 .hp-trust span { font-size: 13.5px; color: var(--paper-dim); line-height: 1.55; }
 
 /* closing call to action */
-.hp-final { text-align: center; padding: 72px 0 30px; }
-.hp-final h2 { font-size: clamp(50px, 14vw, 100px); margin: 0 0 12px; color: var(--paper); }
-.hp-final h2 em { font-style: normal; color: var(--gold); }
-.hp-final p { color: var(--paper-dim); font-size: 15px; margin: 0 auto 26px; max-width: 34ch; line-height: 1.6; }
-.hp-final .hp-cta { justify-content: center; }
+.hp-close { position: relative; overflow: hidden; margin: 56px 0 30px; padding: 54px 22px 46px; text-align: center;
+  border: 1px solid rgba(199,154,70,.38);
+  background: radial-gradient(80% 90% at 50% 0%, rgba(199,154,70,.15) 0%, rgba(199,154,70,0) 65%), var(--ink-raised); }
+.hp-close::before { content: "LOOMEX"; position: absolute; left: 50%; bottom: -0.2em; transform: translateX(-50%);
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: clamp(110px, 40vw, 320px); line-height: 1;
+  letter-spacing: 0.04em; color: transparent; -webkit-text-stroke: 1px rgba(245,240,232,.09);
+  white-space: nowrap; pointer-events: none; }
+.hp-close > * { position: relative; z-index: 1; }
+.hp-close-kicker { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 16px;
+  font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); }
+.hp-close-kicker::before, .hp-close-kicker::after { content: ""; width: 28px; height: 1px; background: var(--gold); }
+.hp-close h2 { font-size: clamp(44px, 12.5vw, 92px); line-height: .95; margin: 0 0 16px; color: var(--paper); }
+.hp-close h2 em { font-style: normal; color: var(--gold); }
+.hp-close p.hp-close-lead { color: var(--paper-dim); font-size: 15px; line-height: 1.6; max-width: 36ch; margin: 0 auto 26px; }
+.hp-close-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.hp-close-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; max-width: 320px; min-width: 0; padding: 15px 24px; text-decoration: none; }
+.hp-close-actions .btn svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.hp-close-actions .btn.hp-ghost { background: transparent; color: var(--paper); border: 1px solid var(--paper-dim); }
+.hp-close-actions .btn.hp-ghost:hover { background: transparent; border-color: var(--gold); color: var(--gold); }
 
 @media (min-width: 900px) {
   .hp-wrap { max-width: var(--max-wide); padding: 0 32px; }
@@ -448,12 +459,210 @@ HOME_CSS = """
   .hp-trust { grid-template-columns: repeat(3, 1fr); margin-top: 80px; }
   .hp-trust > div { border-bottom: none; border-right: 1px solid var(--line); padding: 26px 24px; }
   .hp-trust > div:last-child { border-right: none; }
-  .hp-final { padding: 110px 0 50px; }
+  .hp-close { margin-top: 80px; padding: 88px 40px 76px; }
+  .hp-close-actions { flex-direction: row; justify-content: center; gap: 14px; }
+  .hp-close-actions .btn { width: auto; max-width: none; min-width: 230px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hp-rise, .hp-marquee-track { animation: none; }
 }
+
+/* ---- Shop by category: grid with overlay labels ---- */
+.hp-cats {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  overflow: visible; margin: 0; padding: 0; scroll-snap-type: none;
+}
+.hp-cats .hp-cat {
+  position: relative; flex: none; max-width: none; overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(120% 90% at 50% 28%, rgba(199, 154, 70, 0.16) 0%, rgba(199, 154, 70, 0) 62%),
+    var(--ink-raised);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.hp-cats .hp-cat:hover { border-color: var(--gold); transform: translateY(-3px); }
+.hp-cat-img { aspect-ratio: 4/5; background: none; padding: 16px 16px 64px; box-sizing: border-box; }
+.hp-cat-img img { object-fit: contain; filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.4)); }
+.hp-cat-img.empty { background-image: none; }
+.hp-cat-label {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 14px 14px;
+  background: linear-gradient(to top, rgba(18, 15, 12, 0.95) 30%, rgba(18, 15, 12, 0));
+  font-size: 19px; letter-spacing: 0.06em;
+}
+.hp-cat-label span:last-child {
+  width: 30px; height: 30px; border: 1px solid var(--gold); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.hp-cat:hover .hp-cat-label span:last-child { background: var(--gold); color: var(--ink); }
+.hp-arrows { display: none !important; }
+@media (min-width: 900px) {
+  .hp-cats { grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 0; padding: 0; }
+  .hp-cat-label { font-size: 24px; padding: 22px 20px 18px; }
+}
+
+/* ---- Trust strip ---- */
+.hp-trust { display: grid; gap: 0; margin-top: 56px; border: none;
+  border-top: 1px solid rgba(199,154,70,.45); border-bottom: 1px solid rgba(199,154,70,.45); }
+.hp-trust > div,
+.hp-trust > div:last-child {
+  display: grid; grid-template-columns: 28px 1fr; column-gap: 14px; align-items: center;
+  padding: 16px 4px; border: none; border-bottom: 1px solid var(--line); background: none; text-align: left;
+}
+.hp-trust > div:last-child { border-bottom: none; }
+.hp-trust-icon { grid-row: 1 / span 2; width: 28px; height: 28px; color: var(--gold);
+  display: flex; align-items: center; justify-content: center; }
+.hp-trust-icon svg { width: 26px; height: 26px; }
+.hp-trust strong { display: block; margin: 0 0 2px; font-family: "Big Shoulders Display", sans-serif; font-weight: 700;
+  font-size: 19px; letter-spacing: .06em; text-transform: uppercase; color: var(--paper); }
+.hp-trust p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--paper-dim); }
+@media (min-width: 900px) {
+  .hp-trust { grid-template-columns: repeat(3, 1fr); margin-top: 80px; }
+  .hp-trust > div,
+  .hp-trust > div:last-child { padding: 28px 30px; border-bottom: none; border-right: 1px solid var(--line); column-gap: 16px; }
+  .hp-trust > div:last-child { border-right: none; }
+  .hp-trust-icon { width: 32px; height: 32px; }
+  .hp-trust-icon svg { width: 30px; height: 30px; }
+  .hp-trust strong { font-size: 22px; }
+  .hp-trust p { font-size: 13.5px; }
+}
+
+/* ---- The Sets Edit ---- */
+.hp-sets { margin-top: 64px; padding: 44px 0 48px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  background: radial-gradient(90% 120% at 15% 50%, rgba(199,154,70,.10) 0%, rgba(199,154,70,0) 60%), var(--ink-raised); }
+.hp-sets-grid { display: grid; gap: 30px; align-items: center; }
+.hp-sets-copy { text-align: center; }
+.hp-sets-kicker { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 12px;
+  font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); }
+.hp-sets-kicker::before, .hp-sets-kicker::after { content: ""; width: 28px; height: 1px; background: var(--gold); }
+.hp-sets-title { font-size: clamp(46px, 13vw, 84px); line-height: .95; margin: 0 0 12px; color: var(--paper); }
+.hp-sets-title em { font-style: normal; color: var(--gold); }
+.hp-sets-lead { color: var(--paper-dim); font-size: 15px; margin: 0 0 22px; }
+.hp-sets-copy .btn { display: inline-block; width: auto; min-width: 0; padding: 14px 26px; text-decoration: none;
+  background: transparent; color: var(--paper); border: 1px solid var(--gold); }
+.hp-sets-copy .btn:hover { background: var(--gold); color: var(--ink); }
+.hp-sets-cols { display: grid; grid-template-columns: repeat(2, 1fr); }
+.hp-set { display: flex; flex-direction: column; align-items: center; padding: 16px 10px;
+  border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
+.hp-set:nth-child(odd) { border-left: none; }
+.hp-set:nth-child(-n+2) { border-top: none; }
+.hp-set-img { display: block; width: 100%; max-width: 160px; aspect-ratio: 4/5; }
+.hp-set-img img { width: 100%; height: 100%; object-fit: contain; display: block;
+  filter: drop-shadow(0 12px 14px rgba(0,0,0,.4)); transition: transform .3s ease; }
+.hp-set-img:hover img { transform: scale(1.05); }
+.hp-set-name { margin-top: 10px; font-size: 20px; letter-spacing: .08em; text-transform: uppercase; color: var(--paper); }
+.hp-set-name:hover { color: var(--gold); }
+@media (min-width: 900px) {
+  .hp-sets { padding: 64px 0; margin-top: 90px; }
+  .hp-sets-grid { grid-template-columns: .85fr 1.7fr; gap: 56px; }
+  .hp-sets-copy { text-align: left; }
+  .hp-sets-kicker { justify-content: flex-start; }
+  .hp-sets-kicker::after { display: none; }
+  .hp-sets-cols { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .hp-set, .hp-set:nth-child(-n+2) { border-top: none; border-left: 1px solid var(--line); padding: 0 16px; }
+  .hp-set:first-child { border-left: none; }
+  .hp-set-img { max-width: 190px; }
+  .hp-set-name { font-size: 22px; }
+}
+/* sets heading: elegant serif, two lines */
+.hp-sets .hp-sets-title {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif; font-weight: 600; text-transform: none;
+  letter-spacing: -0.01em; line-height: 1.12; margin: 0 0 20px;
+  font-size: clamp(30px, 8.6vw, 46px);
+}
+.hp-sets .hp-sets-title em { font-style: italic; font-weight: 500; color: var(--gold); }
+@media (min-width: 900px) {
+  .hp-sets .hp-sets-title { font-size: clamp(36px, 3.4vw, 52px); }
+}
+
+/* category tiles: the photo box is sized explicitly so it sits ABOVE the label strip,
+   and the garment is centered inside that box (see hpPlace in HOME_JS) */
+.hp-cats .hp-cat-img { position: relative !important; padding: 0 !important; }
+.hp-cats .hp-cat-img img {
+  position: absolute !important; left: 16px !important; top: 16px !important;
+  width: calc(100% - 32px) !important; height: calc(100% - 84px) !important;
+  object-fit: contain !important; object-position: center !important;
+}
+@media (min-width: 900px) {
+  .hp-cats .hp-cat-img img { height: calc(100% - 100px) !important; }
+}
+
+/* ---- Why Loomex (playful band) ---- */
+.hp-why { position: relative; margin-top: 0; padding: 64px 0 72px; overflow: hidden;
+  background-color: var(--stone); color: var(--ink-on-stone);
+  background-image: radial-gradient(rgba(18,15,12,.09) 1.3px, transparent 1.4px); background-size: 20px 20px; }
+.hp-why .hp-wrap { position: relative; }
+.hp-why-kicker { margin: 0 0 10px; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-dim); text-align: center; }
+.hp-why-title { margin: 0 0 12px; text-align: center; font-size: clamp(46px, 14vw, 92px); line-height: .95; color: var(--ink-on-stone); }
+.hp-why-title em { font-style: normal; color: var(--gold-dim); text-decoration: underline wavy var(--gold);
+  text-decoration-thickness: 3px; text-underline-offset: 7px; text-decoration-skip-ink: none; }
+.hp-why-lead { margin: 0 auto 38px; max-width: 34ch; text-align: center; font-size: 15.5px; line-height: 1.55; color: var(--ink-dim-on-stone); }
+.hp-why-grid { display: grid; gap: 22px; grid-template-columns: 1fr; }
+.hp-why-card { position: relative; padding: 24px 22px 22px; background: var(--ink); color: var(--paper);
+  border: 2px solid var(--ink); box-shadow: 7px 7px 0 var(--gold);
+  transition: rotate .25s ease, translate .25s ease, box-shadow .25s ease; }
+.hp-why-card.c1 { rotate: -1.6deg; } .hp-why-card.c2 { rotate: 1.3deg; }
+.hp-why-card.c3 { rotate: -1deg; }   .hp-why-card.c4 { rotate: 1.8deg; }
+.hp-why-card:hover { rotate: 0deg; translate: 0 -6px; box-shadow: 11px 11px 0 var(--gold); }
+.hp-why-num { position: absolute; top: -16px; right: 14px; display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%; background: var(--gold); color: var(--ink);
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 20px; rotate: 8deg; }
+.hp-why-ico { width: 44px; height: 44px; margin-bottom: 14px; color: var(--gold); }
+.hp-why-ico svg { width: 100%; height: 100%; display: block; }
+.hp-why-card h3 { margin: 0 0 8px; font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 27px;
+  line-height: 1; letter-spacing: .02em; text-transform: uppercase; color: var(--paper); }
+.hp-why-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--paper-dim); }
+.hp-why-sticker { display: none; }
+@keyframes hp-wobble { from { rotate: 9deg; } to { rotate: 17deg; } }
+@media (min-width: 560px) { .hp-why-grid { grid-template-columns: 1fr 1fr; gap: 28px; } }
+@media (min-width: 900px) {
+  .hp-why { padding: 96px 0 104px; }
+  .hp-why-grid { grid-template-columns: repeat(4, 1fr); gap: 26px; }
+  .hp-why-lead { font-size: 17px; margin-bottom: 52px; }
+  .hp-why-sticker { display: flex; align-items: center; justify-content: center; text-align: center; position: absolute;
+    top: -8px; right: 8px; width: 112px; height: 112px; border-radius: 50%; background: var(--gold); color: var(--ink);
+    border: 2px solid var(--ink); font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 20px;
+    line-height: 1; letter-spacing: .04em; text-transform: uppercase; padding: 10px; box-sizing: border-box;
+    animation: hp-wobble 3.6s ease-in-out infinite alternate; }
+}
+@media (prefers-reduced-motion: reduce) { .hp-why-sticker { animation: none; } .hp-why-card { transition: none; } }
 </style>
+"""
+WHY_HTML = """
+  <section class="hp-why" id="why">
+    <div class="hp-wrap">
+      <div class="hp-why-sticker">No dress code</div>
+      <p class="hp-why-kicker">Why Loomex</p>
+      <h2 class="hp-why-title display">Why <em>Loomex?</em></h2>
+      <p class="hp-why-lead">Because &ldquo;basically&rdquo; should never mean boring.</p>
+      <div class="hp-why-grid">
+        <article class="hp-why-card c1">
+          <span class="hp-why-num">01</span>
+          <div class="hp-why-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"></path><path d="m3 13 9 5 9-5"></path><path d="m3 17.5 9 5 9-5"></path></svg></div>
+          <h3>Thick where it counts</h3>
+          <p>Heavyweight cotton that feels like a hug and keeps its shape.</p>
+        </article>
+        <article class="hp-why-card c2">
+          <span class="hp-why-num">02</span>
+          <div class="hp-why-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"></path><path d="M4 20 21 3"></path><path d="M21 16v5h-5"></path><path d="m15 15 6 6"></path><path d="m4 4 5 5"></path></svg></div>
+          <h3>Mix it. Match it.</h3>
+          <p>Wear one piece solo or grab the matching set. Both look like you tried.</p>
+        </article>
+        <article class="hp-why-card c3">
+          <span class="hp-why-num">03</span>
+          <div class="hp-why-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg></div>
+          <h3>Pay at the door</h3>
+          <p>Cash on delivery. See it, feel it, then pay for it.</p>
+        </article>
+        <article class="hp-why-card c4">
+          <span class="hp-why-num">04</span>
+          <div class="hp-why-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v5h5"></path></svg></div>
+          <h3>Change your mind</h3>
+          <p>You get 7 days after delivery to start a return. No drama.</p>
+        </article>
+      </div>
+    </div>
+  </section>
 """
 HOME_JS = """
 <script>
@@ -464,6 +673,76 @@ function hpScroll(dir) {
   var step = (tile ? tile.getBoundingClientRect().width : 260) + 20;
   row.scrollBy({ left: dir * step * 2, behavior: 'smooth' });
 }
+
+/* ---- Center each category photo in its tile ----
+   The six photos have different amounts of empty space around the garment, so
+   the garments sit at different heights. For each photo we find where the
+   garment really is (ignoring transparent / plain background) and shift the
+   photo so the garment's middle lands on the middle of the tile.
+   The photo that is measured is the very same <img> on the page (loaded with
+   crossorigin so the browser lets us read its pixels). If anything goes wrong
+   the photo is simply left where it is and a warning is printed in the console. */
+function hpPlace(img) {
+  var fx = parseFloat(img.dataset.fx), fy = parseFloat(img.dataset.fy);
+  var nw = img.naturalWidth, nh = img.naturalHeight;
+  if (isNaN(fx) || isNaN(fy) || !nw || !nh) return;
+  var bw = img.clientWidth, bh = img.clientHeight;
+  if (!bw || !bh) return;
+  var s = Math.min(bw / nw, bh / nh);
+  var dx = (0.5 - fx) * nw * s, dy = (0.5 - fy) * nh * s;
+  img.style.translate = dx.toFixed(1) + 'px ' + dy.toFixed(1) + 'px';
+}
+
+function hpMeasure(img) {
+  if (img.dataset.fx !== undefined) { hpPlace(img); return; }
+  var nw = img.naturalWidth, nh = img.naturalHeight;
+  if (!nw || !nh) return;
+  try {
+    var sc = Math.min(1, 240 / Math.max(nw, nh));
+    var w = Math.max(1, Math.round(nw * sc)), h = Math.max(1, Math.round(nh * sc));
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, w, h);
+    var d = ctx.getImageData(0, 0, w, h).data;
+    var br = d[0], bg = d[1], bb = d[2], opaqueBg = d[3] > 240;
+    var colCount = new Uint16Array(w), rowCount = new Uint16Array(h);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var i = (y * w + x) * 4, on;
+        if (opaqueBg) on = Math.abs(d[i] - br) + Math.abs(d[i + 1] - bg) + Math.abs(d[i + 2] - bb) > 60;
+        else on = d[i + 3] > 40;
+        if (on) { colCount[x]++; rowCount[y]++; }
+      }
+    }
+    function span(a) {
+      var mx = 0, k, lo = -1, hi = -1;
+      for (k = 0; k < a.length; k++) if (a[k] > mx) mx = a[k];
+      var t = Math.max(2, mx * 0.04);
+      for (k = 0; k < a.length; k++) if (a[k] >= t) { if (lo < 0) lo = k; hi = k; }
+      return [lo, hi];
+    }
+    var xs = span(colCount), ys = span(rowCount);
+    if (xs[0] < 0 || ys[0] < 0) { console.warn('[Loomex] no garment found in', img.alt); return; }
+    img.dataset.fx = ((xs[0] + xs[1] + 1) / 2) / w;
+    img.dataset.fy = ((ys[0] + ys[1] + 1) / 2) / h;
+    console.log('[Loomex] centered', img.alt, img.dataset.fx, img.dataset.fy);
+    hpPlace(img);
+  } catch (e) {
+    console.warn('[Loomex] could not center', img.alt, '-', e && e.message);
+  }
+}
+
+function hpInit() {
+  document.querySelectorAll('.hp-cat-img img').forEach(function (img) {
+    if (img.complete && img.naturalWidth) hpMeasure(img);
+    else img.addEventListener('load', function () { hpMeasure(img); }, { once: true });
+  });
+}
+hpInit();
+window.addEventListener('resize', function () {
+  document.querySelectorAll('.hp-cat-img img').forEach(hpPlace);
+});
 </script>
 """
 def _home_image(p: dict) -> str:
@@ -478,6 +757,34 @@ def _home_image(p: dict) -> str:
     return p.get("image_url") or ""
 
 
+# Which colorway each set shows on the homepage "sets" section (key = the products' set_name,
+# lowercase). The hoodie/top and the pants both show this colorway, so they always match.
+# A set that isn't listed here, or a product that doesn't have that colorway, falls back to
+# its first color. Colorway names must match the product's color names exactly.
+HOME_SET_COLORS = {
+    "slash": "Olive / Beige",
+}
+
+
+def _home_image_for(p: dict, color: str | None = None) -> str:
+    """Front photo of `color` for this product; first-color photo if it has no such color."""
+    if color:
+        v = (p.get("color_images") or {}).get(color)
+        if isinstance(v, list) and v:
+            return v[0]
+        if isinstance(v, str) and v:
+            return v
+    return _home_image(p)
+
+
+# If the image host ever refuses cross-origin reads, the tile photo would fail to load.
+# This puts back the plain photo (no centering) instead of leaving an empty tile.
+_CAT_IMG_ONERROR = (
+    "if(!this.dataset.plain){this.dataset.plain=1;this.removeAttribute('crossorigin');"
+    "this.src=this.dataset.src;}"
+)
+
+
 def landing_page(categories: list, cart_count: int = 0, subcategories: dict | None = None,
                  products: list | None = None) -> str:
     products = products or []
@@ -487,19 +794,9 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     # hero banner
     HERO_BANNER = "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/product_images/hero%20section/banner%20img.jpeg"
     HERO_BANNER_MOBILE = "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/product_images/hero%20section/banner%20image%20portrait.jpeg"
-    # hero visual
-    hero_visual = ""
-    if pool:
-        hp, hu = pool[0]
-        hero_visual = (
-            f'<a href="/product/{escape(hp["slug"])}" class="hp-visual hp-rise d2">'
-            f'<div class="hp-visual-frame"><img src="{escape(hu)}" alt="{escape(hp["name"])}"></div>'
-            f'<span class="hp-visual-tag"><strong>{escape(hp["name"])}</strong> &middot; {hp["price"]:.0f} EGP</span>'
-            f'</a>'
-        )
 
     # ticker
-    words = ["Heavyweight cotton", "Homewear", "Woven for rest", "Made to be worn in"] * 2
+    words = ["MADE TO STAND OUT", "SIMPLICITY WITH PURPOSE", "BUILT TO LAST", "QUALITY WITHOUT COMPROMISE"] * 2
     ticker_set = "".join(f"<span>{w}</span><i>&#10022;</i>" for w in words)
     ticker = (
         f'<div class="hp-marquee" aria-hidden="true"><div class="hp-marquee-track">'
@@ -513,7 +810,14 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
         label = c.replace("-", " ").title()
         img = next((u for p, u in pool if p.get("category") == c), "")
         if img:
-            media = f'<div class="hp-cat-img"><img src="{escape(img)}" alt="{escape(label)}" loading="lazy"></div>'
+            # "c=1" gives these tile photos their own cache entry, so the browser never
+            # re-uses a copy that was cached without cross-origin permission.
+            img_src = img + ("&" if "?" in img else "?") + "c=1"
+            media = (
+                f'<div class="hp-cat-img"><img src="{escape(img_src)}" data-src="{escape(img)}" '
+                f'crossorigin="anonymous" onerror="{_CAT_IMG_ONERROR}" '
+                f'alt="{escape(label)}" loading="lazy"></div>'
+            )
         else:
             media = '<div class="hp-cat-img empty"></div>'
         tiles.append(
@@ -522,25 +826,42 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
         )
     cats_html = f'<div class="hp-cats" id="hp-cats">{"".join(tiles)}</div>'
 
-    # new arrivals
-    featured = pool[1:5] if len(pool) > 4 else pool[:4]
-    cards = [
-        f'<a href="/product/{escape(p["slug"])}" class="hp-card">'
-        f'<div class="hp-card-img"><img src="{escape(u)}" alt="{escape(p["name"])}" loading="lazy"></div>'
-        f'<p class="hp-card-name">{escape(p["name"])}</p>'
-        f'<p class="hp-card-price">{p["price"]:.0f} EGP</p></a>'
-        for p, u in featured
-    ]
-    featured_html = ""
-    if cards:
-        featured_html = f"""
-  <section class="hp-section">
-    <div class="hp-wrap">
-      <div class="hp-head">
-        <div><p class="hp-kicker">Just in</p><h2 class="hp-h2 display">New arrivals</h2></div>
-        <a href="/shop" class="hp-more">Shop all</a>
+    # shop the sets
+    sets = {}
+    for p in products:
+        if p.get("set_name"):
+            sets.setdefault(p["set_name"], []).append(p)
+    set_cols = []
+    for set_key, items in sets.items():
+        set_color = HOME_SET_COLORS.get(str(set_key).lower())
+        bottoms = [p for p in items if p.get("category") == "pants"]
+        tops = [p for p in items if p.get("category") != "pants"]
+        if not bottoms or not tops:
+            continue
+        top, bottom = tops[0], bottoms[0]
+        t_img, b_img = _home_image_for(top, set_color), _home_image_for(bottom, set_color)
+        if not t_img or not b_img:
+            continue
+        title = bottom["name"].removesuffix(" Pants")
+        set_cols.append(
+            f'<div class="hp-set">'
+            f'<a href="/product/{escape(top["slug"])}" class="hp-set-img"><img src="{escape(t_img)}" alt="{escape(top["name"])}" loading="lazy"></a>'
+            f'<a href="/product/{escape(bottom["slug"])}" class="hp-set-img"><img src="{escape(b_img)}" alt="{escape(bottom["name"])}" loading="lazy"></a>'
+            f'<a href="/product/{escape(top["slug"])}" class="hp-set-name display">{escape(title)}</a>'
+            f'</div>'
+        )
+    sets_html = ""
+    if set_cols:
+        sets_html = f"""
+  <section class="hp-sets" id="sets">
+    <div class="hp-wrap hp-sets-grid">
+      <div class="hp-sets-copy">
+        <p class="hp-sets-kicker">The Loomex collection</p>
+        <h2 class="hp-sets-title display">Wear one <em>or</em><br>wear the set.</h2>
+        
+        <a href="/shop" class="btn">Shop the sets &rarr;</a>
       </div>
-      <div class="hp-products">{"".join(cards)}</div>
+      <div class="hp-sets-cols">{"".join(set_cols)}</div>
     </div>
   </section>"""
 
@@ -549,7 +870,7 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
    <section class="hp-hero">
     <div class="hp-hero-bg"><picture>
       <source media="(max-width: 699px)" srcset="{escape(HERO_BANNER_MOBILE)}">
-      <img src="{escape(HERO_BANNER)}" alt="Loomex homewear" fetchpriority="high">
+      <img src="{escape(HERO_BANNER)}" alt="Loomex collection" fetchpriority="high">
     </picture></div>
     <div class="hp-wrap">
       <div class="hp-hero-copy">
@@ -570,7 +891,7 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
   <section class="hp-section" id="categories">
     <div class="hp-wrap">
       <div class="hp-head">
-        <div><p class="hp-kicker">The collection</p><h2 class="hp-h2 display">Shop by category</h2></div>
+        <div><h2 class="hp-h2 display">Shop by category</h2></div>
         <div class="hp-head-right">
           <div class="hp-arrows">
             <button type="button" class="hp-arrow" onclick="hpScroll(-1)" aria-label="Previous categories">&#8249;</button>
@@ -583,20 +904,19 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     </div>
   </section>
 
+  {sets_html}
+
+  {WHY_HTML}
 
   <div class="hp-wrap">
-    <div class="hp-trust">
-      <div><strong>Pay your way</strong><span>Cash on delivery at checkout. Prefer another way to pay? Send us a DM on Instagram.</span></div>
-      <div><strong>7-day returns</strong><span>Start a return within 7 days of delivery. It's all in the Return Policy.</span></div>
-      <div><strong>Here to help</strong><span>Questions about an order or sizing? Message us on Instagram or by email.</span></div>
-    </div>
+    <section class="hp-close">
+      <p class="hp-close-kicker">Loomex</p>
+      <h2 class="display">Not dressed up.<br><em>Never dressed down.</em></h2>
+      <p class="hp-close-lead">Effortless fits. Matching sets. Everyday comfort, without compromise.</p>
 
-    <section class="hp-final">
-      <h2 class="display">Wear it <em>in.</em></h2>
-      <p>Heavyweight cotton homewear for the hours that don't need an outfit.</p>
-      <div class="hp-cta">
-        <a href="/shop" class="btn">Shop Loomex</a>
-        <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener" class="btn hp-ghost">Follow @loomex_clothing</a>
+      <div class="hp-close-actions">
+        <a href="/shop" class="btn">Shop the collection &rarr;</a>
+        <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener" class="btn hp-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><circle cx="12" cy="12" r="4"></circle><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>@loomex_clothing</a>
       </div>
     </section>
   </div>
@@ -640,8 +960,6 @@ SHOP_CSS = """
 .subtab.active{color:var(--gold);background:none;box-shadow:inset 0 -2px 0 var(--gold);}
 @media (min-width:560px){.subtabs{justify-content:center;}}
 @media (min-width:900px){.subtabs{padding-left:32px;padding-right:32px;}}
-}
-
 </style>
 <script>
 function cardShowColor(el, ci){
