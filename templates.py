@@ -1014,7 +1014,7 @@ CHECKOUT_CSS = """
 .field-error[hidden] { display: none; }
 .form-group input.invalid, .form-group select.invalid { border-color: #e5806b; }
 .pay-other { color: var(--paper-dim); font-size: 13px; line-height: 1.6; margin: 10px 0 0;
-  padding: 12px 14px; border: 1px solid var(--line); background: var(--ink-raised); }
+  padding: 12px 14px; border: 1px solid var(--line); background: var(--ink-raised); font-weight: 700; }
 .pay-other a { color: var(--gold); text-decoration: underline; }
 .btn-ghost { background: transparent; color: var(--paper); border: 1px solid var(--paper-dim); }
 .btn-ghost:hover { background: transparent; border-color: var(--gold); color: var(--gold); }
