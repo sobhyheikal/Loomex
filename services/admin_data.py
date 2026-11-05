@@ -91,7 +91,7 @@ def slugify(name: str) -> str:
 def blank_product_form() -> dict:
     return {"name": "", "slug": "", "description": "", "category": CATEGORIES[0],
             "subcategory": "", "price": "", "sizes": "S, M, L, XL", "colors": "",
-            "image_url": "", "photos": "", "in_stock": True}
+            "image_url": "", "photos": "", "in_stock": True, "sold_out": []}
 
 
 def product_to_form(p: dict) -> dict:
@@ -104,6 +104,7 @@ def product_to_form(p: dict) -> dict:
         "image_url": p.get("image_url") or "",
         "photos": photos_to_text(p.get("color_images")),
         "in_stock": bool(p.get("in_stock", True)),
+        "sold_out": list(p.get("sold_out_sizes") or []),
     }
 
 
@@ -147,6 +148,7 @@ def build_product_row(form: dict, creating: bool) -> tuple[dict | None, str | No
         "category": category, "subcategory": sub, "price": price, "sizes": sizes,
         "colors": colors, "image_url": image_url or None, "color_images": photos,
         "in_stock": bool(form["in_stock"]),
+        "sold_out_sizes": [s for s in sizes if s in form.get("sold_out", [])],
     }
     if creating:
         slug = slugify(form["slug"] or name)
@@ -173,10 +175,57 @@ def list_orders(q: str | None = None, limit: int = 100) -> list[dict]:
     return qb.order("created_at", desc=True).limit(limit).execute().data or []
 
 
-def update_order_status(oid: str, status: str, payment_status: str):
+def update_order_status(oid: str, status: str, payment_status: str = ""):
+    row = {"status": status[:40]}
+    if payment_status:  # cancelled orders send only a status
+        row["payment_status"] = payment_status[:40]
+    supabase.table("orders").update(row).eq("id", oid).execute()
     supabase.table("orders").update(
         {"status": status[:40], "payment_status": payment_status[:40]}
     ).eq("id", oid).execute()
+    ORDER_VIEWS = [("active", "Active"), ("cancelled", "Cancelled"),
+               ("completed", "Completed"), ("history", "History")]
+ORDER_VIEWS = [("active", "Active"), ("cancelled", "Cancelled"),
+               ("completed", "Completed"), ("history", "History")]
+
+
+def filter_orders(orders: list[dict], view: str) -> list[dict]:
+    """Orders tabs. Completed = delivered within the last 7 days, History = older delivered."""
+    if view == "all":
+        return orders
+    week_ago = _now() - timedelta(days=7)
+    out = []
+    for o in orders:
+        status = o.get("status") or "new"
+        placed = promo_svc._parse(o.get("created_at")) or _now()
+        if view == "active" and status not in ("delivered", "cancelled"):
+            out.append(o)
+        elif view == "cancelled" and status == "cancelled":
+            out.append(o)
+        elif view == "completed" and status == "delivered" and placed >= week_ago:
+            out.append(o)
+        elif view == "history" and status == "delivered" and placed < week_ago:
+            out.append(o)
+    return out
+
+def filter_orders(orders: list[dict], view: str) -> list[dict]:
+    """Orders tabs. Completed = delivered within the last 7 days, History = older delivered."""
+    if view == "all":
+        return orders
+    week_ago = _now() - timedelta(days=7)
+    out = []
+    for o in orders:
+        status = o.get("status") or "new"
+        placed = promo_svc._parse(o.get("created_at")) or _now()
+        if view == "active" and status not in ("delivered", "cancelled"):
+            out.append(o)
+        elif view == "cancelled" and status == "cancelled":
+            out.append(o)
+        elif view == "completed" and status == "delivered" and placed >= week_ago:
+            out.append(o)
+        elif view == "history" and status == "delivered" and placed < week_ago:
+            out.append(o)
+    return out
 
 
 # ------------------------------------------------------------ customers ----

@@ -44,14 +44,14 @@ def login_form():
 
 
 @public_router.post("/admin/login")
-def login(request: Request, email: str = Form(""), password: str = Form("")):
+def login(request: Request, password: str = Form("")):
     acct = admin_auth.get_account()
     if not admin_auth.configured(acct):
         return HTMLResponse(ui.login_page(configured=False), status_code=503)
-    if not admin_auth.verify_login(email, password):
+    if not admin_auth.verify_login(password):
         time.sleep(1)  # slows down guessing
         return HTMLResponse(ui.login_page(configured=True, first_time=acct is None,
-                                          error="Wrong email or password."), status_code=401)
+                                          error="Wrong password."), status_code=401)
     resp = RedirectResponse("/admin/orders", status_code=303)
     admin_auth.set_login_cookie(resp, request, acct)
     return resp
@@ -99,19 +99,37 @@ def profile_save(request: Request, current_password: str = Form(""), email: str 
     return resp
 
 
-@router.get("")
-def admin_home():
-    return RedirectResponse("/admin/orders", status_code=303)
+@router.post("/profile")
+def profile_save(request: Request, current_password: str = Form(""),
+                 new_password: str = Form(""), confirm_password: str = Form("")):
+    acct = admin_auth.get_account()
+    current_email = acct["email"] if acct else ""
 
+    def fail(error):
+        return HTMLResponse(ui.profile_page(current_email, error=error), status_code=400)
+
+    if not admin_auth.verify_current(current_password, acct):
+        time.sleep(1)
+        return fail("Your current password is wrong.")
+    if len(new_password) < admin_auth.MIN_PASSWORD:
+        return fail(f"The new password must be at least {admin_auth.MIN_PASSWORD} characters.")
+    if new_password != confirm_password:
+        return fail("The two new passwords don't match.")
+    admin_auth.save_account(admin_auth.hash_password(new_password))
+    resp = _go("/admin/profile", "profile")
+    admin_auth.set_login_cookie(resp, request, admin_auth.get_account())  # keep this device signed in
+    return resp
 
 # ------------------------------------------------------------- products ----
 def _product_form(name: str = Form(""), slug: str = Form(""), description: str = Form(""),
                   category: str = Form(""), subcategory: str = Form(""), price: str = Form(""),
                   sizes: str = Form(""), colors: str = Form(""), image_url: str = Form(""),
-                  photos: str = Form(""), in_stock: str = Form("")) -> dict:
+                  photos: str = Form(""), in_stock: str = Form(""),
+                  sold_out: list[str] = Form([])) -> dict:
     return {"name": name, "slug": slug, "description": description, "category": category,
             "subcategory": subcategory, "price": price, "sizes": sizes, "colors": colors,
-            "image_url": image_url, "photos": photos, "in_stock": bool(in_stock)}
+            "image_url": image_url, "photos": photos, "in_stock": bool(in_stock),
+            "sold_out": sold_out}
 
 
 @router.get("/products", response_class=HTMLResponse)
@@ -171,20 +189,24 @@ def product_delete(pid: UUID):
 
 # --------------------------------------------------------------- orders ----
 @router.get("/orders", response_class=HTMLResponse)
-def orders(q: str | None = None, msg: str | None = None):
-    return ui.orders_page(data.list_orders(q), q or "", msg=MSGS.get(msg or ""))
+def orders(q: str | None = None, view: str | None = None, msg: str | None = None):
+    if view not in [k for k, _ in data.ORDER_VIEWS]:
+        view = "all" if q else "active"  # a search from Customers looks in every tab
+    return ui.orders_page(data.filter_orders(data.list_orders(q), view), q or "",
+                          msg=MSGS.get(msg or ""), view=view)
 
 
 @router.post("/orders/{oid}/status")
-def order_status(oid: UUID, status: str = Form(...), payment_status: str = Form(...), q: str = Form("")):
+def order_status(oid: UUID, status: str = Form(...), payment_status: str = Form(""),
+                 q: str = Form(""), view: str = Form("")):
     data.update_order_status(str(oid), status, payment_status)
-    return _go("/admin/orders", "updated", q=q)
+    return _go("/admin/orders", "updated", q=q, view=view)
 
 
 @router.post("/orders/{oid}/delete")
-def order_delete(oid: UUID, q: str = Form("")):
+def order_delete(oid: UUID, q: str = Form(""), view: str = Form("")):
     data.soft_delete("orders", str(oid))
-    return _go("/admin/orders", "deleted", q=q)
+    return _go("/admin/orders", "deleted", q=q, view=view)
 
 
 # ------------------------------------------------------------ customers ----

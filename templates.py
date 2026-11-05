@@ -1156,13 +1156,32 @@ function pgStep(ci, delta){
 }
 </script>
 """
-
+SOLD_OUT_CSS = """
+<style>
+.pill-out { opacity: .4; text-decoration: line-through; cursor: not-allowed; }
+.pill-out input { cursor: not-allowed; }
+.btn-soldout { background: transparent; color: var(--paper-dim); border: 1px solid var(--line); cursor: not-allowed; }
+.pd-soldout-tag { display: inline-block; margin: 0 0 12px; padding: 4px 10px; border: 1px solid #e5806b;
+  color: #e5806b; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+</style>
+"""
 def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
+    sold_out_sizes = set(p.get("sold_out_sizes") or [])
+    available_sizes = [s for s in p["sizes"] if s not in sold_out_sizes]
+    is_sold_out = (not p.get("in_stock", True)) or not available_sizes
+    first_ok = available_sizes[0] if available_sizes else None
     size_pills = "".join(
-        f'<label class="pill"><input type="radio" name="size" value="{escape(s)}"'
-        f'{" checked" if i == 0 else ""}>{escape(s)}</label>'
-        for i, s in enumerate(p["sizes"])
+        f'<label class="pill{" pill-out" if s in sold_out_sizes else ""}">'
+        f'<input type="radio" name="size" value="{escape(s)}"'
+        f'{" checked" if s == first_ok else ""}'
+               f'{" disabled" if s in sold_out_sizes else ""}>{escape(s)}</label>'
+        for s in p["sizes"]
     )
+    add_btn = (
+        '<button class="btn btn-soldout" type="button" disabled>Sold out</button>'
+        if is_sold_out else '<button class="btn" type="submit">Add to Cart</button>'
+    )
+    soldout_tag = '<p class="pd-soldout-tag">Sold out</p>' if is_sold_out else ""
 
     # color_images format: {"Black": ["url1", "url2"], "Olive": ["url3"]}
     color_images = p.get("color_images") or {}
@@ -1221,11 +1240,13 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
     )
 
     body = f"""
+    {SOLD_OUT_CSS}
 <div class="pd-layout">
 {image_block}
 <div class="pd-body">
   <h1 class="pd-name display">{escape(p['name'])}</h1>
   <p class="pd-price">{p['price']:.0f} EGP</p>
+    {soldout_tag}
   <p class="pd-desc">{escape(p.get('description') or '')}</p>
 
   <form action="/cart/add" method="post" onsubmit="{add_to_cart_js}">
@@ -1238,7 +1259,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
    
 
-    <button class="btn" type="submit">Add to Cart</button>
+    {add_btn}
   </form>
 </div>
 </div>

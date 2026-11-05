@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import templates
 from config import CATEGORIES, SUBCATEGORIES
 from services.cart import get_cart, save_cart, cart_item_count, resolve_cart
-
+from services.products import get_product_or_404
 router = APIRouter()
 
 
@@ -52,6 +52,14 @@ def add_to_cart(
     qty: int = Form(1),
 ):
     qty = max(1, min(qty, 10))
+
+    # Refuse sold-out products and sold-out sizes, even if someone forces the request.
+    p = get_product_or_404(product)
+    if not p or not p.get("in_stock", True) or size in (p.get("sold_out_sizes") or []):
+        if _wants_json(request):
+            return JSONResponse({"error": "That item or size is sold out."}, status_code=409)
+        return RedirectResponse(url=f"/product/{product}", status_code=303)
+
     cart = get_cart(request)
 
     for item in cart:

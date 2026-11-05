@@ -84,15 +84,16 @@ def verify_current(password: str, acct: dict | None) -> bool:
     return _verify_hash(password, acct["password_hash"]) if acct else _env_match(password)
 
 
-def verify_login(email: str, password: str) -> bool:
+def verify_login(password: str) -> bool:
     acct = get_account()
     if acct:
-        email_ok = hmac.compare_digest((email or "").strip().lower().encode(), acct["email"].lower().encode())
-        return _verify_hash(password, acct["password_hash"]) and email_ok
+        return _verify_hash(password, acct["password_hash"])
     return _env_match(password)
 
 
-def save_account(email: str, password_hash: str):
+def save_account(password_hash: str):
+    acct = get_account()
+    email = acct["email"] if acct else "admin@loomex.local"
     supabase.table("admin_account").upsert({
         "id": 1, "email": email, "password_hash": password_hash,
         "updated_at": datetime.now(timezone.utc).isoformat(),

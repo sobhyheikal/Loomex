@@ -1,15 +1,16 @@
 """Loomex admin panel HTML. Standalone: it does not use the storefront layout."""
 
+import json
 from datetime import datetime, timezone
 from html import escape
 
 from config import PAYMENT_METHODS
-from services.admin_data import ADMIN_TZ, ORDER_STATUSES, PAYMENT_STATUSES
+from services.admin_data import ADMIN_TZ, ORDER_STATUSES, ORDER_VIEWS, PAYMENT_STATUSES, parse_photos
 from services.promotions import _parse, promo_state
 from templates import FONTS
 
 NAV = [("orders", "Orders"), ("products", "Products"), ("customers", "Customers"),
-       ("promotions", "Promotions"), ("deleted", "Recently Deleted"), ("profile", "Profile")]
+       ("promotions", "Promotions"), ("profile", "Profile")]
 
 ADMIN_CSS = """
 <style>
@@ -34,8 +35,13 @@ a{color:inherit;text-decoration:none;}
 .am-drawer .dl{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
   font-family:"Big Shoulders Display",sans-serif;font-size:22px;text-transform:uppercase;letter-spacing:.03em;color:var(--paper);padding:10px 0;}
 .am-drawer .dl.on{color:var(--gold);}
-.am-out{margin:auto 0 0;padding-top:18px;border-top:1px solid var(--line);}
-.am-out .dl{color:var(--paper-dim);}
+.am-out{margin:auto 0 0;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+.am-out form{margin:0;}
+.am-out .dl{color:var(--paper-dim);width:auto;}
+.trash{display:flex;align-items:center;padding:8px;color:var(--paper-dim);}
+.trash:hover,.trash.on{color:var(--gold);}
+.trash svg{width:22px;height:22px;display:block;}
+.top .trash{justify-self:end;padding:8px 0 8px 8px;}
 .am-toggle:checked ~ .am-drawer{transform:translateX(0);}
 .am-toggle:checked ~ .am-backdrop{opacity:1;pointer-events:auto;}
 .page{max-width:980px;margin:0 auto;padding:22px 18px 70px;}
@@ -83,6 +89,67 @@ details.order[open] summary{border-bottom:1px solid var(--line);}
 .empty{padding:36px 10px;text-align:center;color:var(--paper-dim);font-size:14px;}
 .sec{font-family:"Big Shoulders Display",sans-serif;font-size:22px;text-transform:uppercase;margin:26px 0 10px;} .sec small{font:12px Inter,sans-serif;color:var(--paper-dim);margin-left:8px;}
 .login{max-width:360px;margin:12vh auto;padding:0 18px;text-align:center;} .login .card{text-align:left;margin-top:22px;}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;}
+.tab{--c:var(--paper-dim);text-align:center;padding:8px 4px;border:1.5px solid var(--c);border-radius:999px;font-size:11.5px;font-weight:600;color:var(--c);white-space:nowrap;}
+.tab.active{--c:#6f9a95;} .tab.cancelled{--c:#b86a6a;} .tab.completed{--c:var(--gold);}
+.tab.on{background:var(--c);color:var(--ink);}
+.sect{background:var(--ink-raised);border:1px solid var(--line);margin-bottom:14px;}
+.sect-h{display:flex;align-items:center;gap:10px;padding:11px 16px;background:rgba(241,236,226,.06);border-bottom:1px solid var(--line);}
+.sect-h b{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--gold);color:var(--ink);font-size:12px;}
+.sect-h h2{margin:0;font-family:"Big Shoulders Display",sans-serif;font-size:19px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.sect-b{padding:16px;}
+.pc{background:var(--ink-raised);border:1px solid var(--line);margin-bottom:10px;}
+.pc-band{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 14px;background:rgba(241,236,226,.06);}
+.pc-band .k{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:var(--paper-dim);}
+.pc-body{padding:14px;}
+.pc-foot{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line);}
+.pc-foot form{margin:0;}
+details.newp>summary{list-style:none;display:inline-block;margin-bottom:14px;}
+details.newp>summary::-webkit-details-marker{display:none;}
+.cl{background:var(--ink);border:1px solid var(--line);padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;}
+.cl .thumb{width:58px;height:72px;}
+.cl-main{flex:1;min-width:0;display:grid;gap:8px;}
+.cl-n{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;}
+.cl-top{display:flex;gap:8px;align-items:center;}
+.cl-top input{flex:1;min-width:0;}
+.cl-price{font-size:12.5px;font-weight:600;color:var(--gold);white-space:nowrap;}
+.cl-urls{display:grid;gap:6px;}
+.cl-url{display:flex;gap:8px;align-items:center;}
+.cl-url span{flex:0 0 46px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-dim);}
+.cl-url input{flex:1;min-width:0;}
+details.order .ob{gap:12px;}
+.op{border:1px solid var(--line);background:var(--ink);padding:14px;margin:0;}
+.op h3 small{color:var(--paper-dim);font-weight:500;margin-left:6px;}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px;}
+.kv .l{flex:0 0 74px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-dim);}
+.kv b,.kv a,.kv .mut{flex:1;text-align:right;font-weight:500;word-break:break-word;}
+.kv a.u{color:var(--gold);text-decoration:underline;}
+.mut{color:var(--paper-dim);}
+.oi{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);}
+.oi-r{display:grid;gap:2px;text-align:right;white-space:nowrap;font-size:13.5px;}
+.ot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px;}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sz{display:grid;gap:8px;}
+.sz-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--ink);border:1px solid var(--line);padding:10px 12px;}
+.sz-row .sz-oos{margin-left:auto;}
+.sz-row label{display:flex;align-items:center;gap:10px;cursor:pointer;margin:0;}
+.sz-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold);margin:0;}
+.sz-name{font-weight:600;font-size:14px;min-width:34px;}
+.sz-oos{font-size:12.5px;color:var(--paper-dim);}
+.sz-row.off .sz-name{color:var(--paper-dim);}
+.sz-row.off .sz-oos{opacity:.35;cursor:default;}
+.sz-row.sold .sz-name{text-decoration:line-through;color:var(--gold);}
+.sz-row.sold .sz-oos{color:var(--gold);}
+.sz-rm{background:none;border:none;color:var(--paper-dim);font-size:22px;line-height:1;cursor:pointer;padding:0 2px;} .sz-rm:hover{color:var(--gold);}
+.sz-add{display:flex;gap:8px;margin-top:10px;} .sz-add input{flex:1;min-width:0;}
+.cl-pics{display:flex;flex-wrap:wrap;gap:8px;}
+.cl-pic{position:relative;width:74px;height:94px;background:rgba(128,128,128,.12);border:1px solid var(--line);padding:0;}
+.cl-pic img{width:100%;height:100%;object-fit:contain;display:block;}
+.cl-pl{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:rgba(32,28,24,.85);color:var(--paper);padding:2px 0;}
+.cl-px{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(32,28,24,.9);color:var(--paper);font-size:16px;line-height:1;cursor:pointer;padding:0;}
+.cl-px:hover{color:var(--gold);}
+.cl-padd{display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--gold);border:1px dashed var(--gold-dim);background:transparent;cursor:pointer;}
+.cl-link{display:flex;gap:8px;} .cl-link[hidden]{display:none;} .cl-link input{flex:1;min-width:0;}
 @media(max-width:560px){.two,.three{grid-template-columns:1fr;} h1{font-size:30px;}}
 </style>
 """
@@ -106,9 +173,16 @@ def _first_image(p: dict) -> str:
     return p.get("image_url") or ""
 
 
+TRASH_ICON = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" '
+              'stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/>'
+              '<path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>')
+
+
 def admin_page(title: str, body: str, active: str = "", msg: str | None = None) -> str:
     links = "".join(f'<a href="/admin/{k}" class="dl{" on" if k == active else ""}">{label}</a>' for k, label in NAV)
     flash = f'<div class="flash">{escape(msg)}</div>' if msg else ""
+    on = " on" if active == "deleted" else ""
+    trash = f'<a href="/admin/deleted" class="trash{on}" aria-label="Recently Deleted" title="Recently Deleted">{TRASH_ICON}</a>'
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow"><title>{escape(title)} · Loomex Admin</title>
@@ -117,10 +191,10 @@ def admin_page(title: str, body: str, active: str = "", msg: str | None = None) 
 <input type="checkbox" id="am" class="am-toggle">
 <label for="am" class="am-backdrop"></label>
 <nav class="am-drawer"><label for="am" class="am-close">&times;</label>{links}
-<form method="post" action="/admin/logout" class="am-out"><button class="dl">Log out</button></form></nav>
+<div class="am-out"><form method="post" action="/admin/logout"><button class="dl">Log out</button></form>{trash}</div></nav>
 <header class="top"><div class="top-in">
   <label for="am" class="am-btn" aria-label="Open menu"><span></span><span></span><span></span></label>
-  <a href="/admin/orders" class="logo">LOOM<span>EX</span><small>Admin</small></a><span></span>
+  <a href="/admin/orders" class="logo">LOOM<span>EX</span><small>Admin</small></a>{trash}
 </div></header>
 <main class="page">{flash}{body}</main>
 {LIVE_SEARCH_JS}
@@ -132,8 +206,10 @@ LIVE_SEARCH_JS = """<script>
 document.querySelectorAll('input[data-live]').forEach(function (inp) {
   var form = inp.form, timer = null, seq = 0;
   function run() {
-    var q = inp.value.trim();
-    var url = form.getAttribute('action') + (q ? '?q=' + encodeURIComponent(q) : '');
+    var params = new URLSearchParams(new FormData(form));
+    if (!inp.value.trim()) params.delete('q');
+    var qs = params.toString();
+    var url = form.getAttribute('action') + (qs ? '?' + qs : '');
     var mine = ++seq;
     fetch(url, { credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (html) {
       if (mine !== seq) return;
@@ -154,11 +230,10 @@ def login_page(configured: bool = True, error: str | None = None, first_time: bo
                  '<b>ADMIN_SECRET</b> to your .env file (and to Vercel) and restart.</p></div>')
     else:
         err = f'<div class="err"><strong>{escape(error)}</strong></div>' if error else ""
-        note = ('<p class="hint" style="margin:0 0 14px">First time? Leave the email empty and use the password from '
-                'your .env file, then set your email and password in Profile.</p>' if first_time else "")
+        note = ('<p class="hint" style="margin:0 0 14px">First time? Use the password from '
+                'your .env file, then set your own password in Profile.</p>' if first_time else "")
         inner = f"""<div class="card"><form method="post" action="/admin/login">{err}{note}
-<div class="fg"><label class="f" for="em">Email</label><input type="text" id="em" name="email" autocomplete="username" autofocus></div>
-<div class="fg"><label class="f" for="pw">Password</label><input type="password" id="pw" name="password" autocomplete="current-password" required></div>
+<div class="fg"><label class="f" for="pw">Password</label><input type="password" id="pw" name="password" autocomplete="current-password" autofocus required></div>
 <button class="btn" style="width:100%">Log in</button></form></div>"""
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex, nofollow">
@@ -169,19 +244,15 @@ def login_page(configured: bool = True, error: str | None = None, first_time: bo
 
 def profile_page(email: str, msg: str | None = None, error: str | None = None, form_email: str = "") -> str:
     err = f'<div class="err"><strong>{escape(error)}</strong></div>' if error else ""
-    shown = email or "Not set yet"
     body = f"""<div class="head"><div><h1>Profile</h1>
-<p class="sub">Your admin login. Both owners use this one account.</p></div></div>{err}
+<p class="sub">Change your admin password. Both owners use this one login.</p></div></div>{err}
 <form method="post" action="/admin/profile" class="card">
-<div class="fg"><label class="f">Current email</label><input type="text" value="{escape(shown)}" readonly></div>
-<div class="fg"><label class="f">New email</label><input type="text" name="email" value="{escape(form_email)}" autocomplete="email"
-placeholder="{"leave empty to keep it" if email else "your email"}"></div>
-<div class="fg"><label class="f">New password</label><input type="password" name="new_password" autocomplete="new-password">
-<p class="hint">At least 8 characters. Leave empty to keep your current password. Changing it logs out your other devices.</p></div>
-<div class="fg"><label class="f">Confirm new password</label><input type="password" name="confirm_password" autocomplete="new-password"></div>
-<div class="fg" style="border-top:1px solid var(--line);padding-top:16px"><label class="f">Current password (required to save)</label>
+<div class="fg"><label class="f">Current password</label>
 <input type="password" name="current_password" autocomplete="current-password" required></div>
-<button class="btn">Save profile</button></form>"""
+<div class="fg"><label class="f">New password</label><input type="password" name="new_password" autocomplete="new-password" required>
+<p class="hint">At least 8 characters. Changing it logs out your other devices.</p></div>
+<div class="fg"><label class="f">Confirm new password</label><input type="password" name="confirm_password" autocomplete="new-password" required></div>
+<button class="btn">Change password</button></form>"""
     return admin_page("Profile", body, "profile", msg)
 
 
@@ -205,6 +276,214 @@ def products_page(products: list, msg: str | None = None) -> str:
     return admin_page("Products", body, "products", msg)
 
 
+def _color_rows(v: dict) -> list[dict]:
+    """The product's colors and photo links, as rows for the colors editor."""
+    photos = parse_photos(v.get("photos", ""))
+    names = [c.strip() for c in (v.get("colors") or "").split(",") if c.strip()]
+    seen = {n.lower() for n in names}
+    names += [c for c in photos if c.lower() not in seen]
+    by_name = {c.lower(): urls for c, urls in photos.items()}
+    rows = []
+    for n in names:
+        urls = list(by_name.get(n.lower(), []))
+        rows.append({"name": n, "urls": urls + [""] * max(0, 2 - len(urls))})
+    return rows
+
+
+COLOR_EDITOR_JS = r"""<script>
+/* Colors & photos editor: fills the same "Color = url | url" text the server already reads */
+(function () {
+  var list = document.getElementById('cl-list');
+  if (!list) return;
+  var form = list.closest('form');
+  var colorsField = document.getElementById('cl-colors');
+  var photosField = document.getElementById('cl-photos');
+  var addBtn = document.getElementById('cl-add');
+  var priceInput = form.querySelector('input[name=price]');
+  var LABELS = ['Front', 'Back'];
+  var rows = [];
+  try { rows = JSON.parse(list.dataset.rows || '[]'); } catch (e) {}
+  if (!rows.length) rows = [{name: '', urls: ['', '']}];
+
+  function clean(s) { return (s || '').replace(/[,=|\n\r]+/g, ' ').trim(); }
+  function priceText() {
+    var n = parseFloat(priceInput ? priceInput.value : '');
+    return isNaN(n) ? '' : n.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' EGP';
+  }
+  function firstUrl(row) {
+    return row.urls.map(function (u) { return u.trim(); }).filter(Boolean)[0] || '';
+  }
+  function setThumb(thumb, url) {
+    thumb.innerHTML = '';
+    if (!url) return;
+    var img = document.createElement('img');
+    img.alt = '';
+    img.onerror = function () { img.remove(); };
+    img.src = url;
+    thumb.appendChild(img);
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+  function sync() {
+    var names = [], lines = [];
+    rows.forEach(function (row) {
+      var n = clean(row.name);
+      if (!n) return;
+      names.push(n);
+      var urls = row.urls.map(function (u) { return u.trim(); }).filter(Boolean);
+      if (urls.length) lines.push(n + ' = ' + urls.join(' | '));
+    });
+    colorsField.value = names.join(', ');
+    photosField.value = lines.join('\n');
+  }
+  function render() {
+    list.innerHTML = '';
+    rows.forEach(function (row, ri) {
+      var card = el('div', 'cl');
+      var thumb = el('div', 'thumb');
+      setThumb(thumb, firstUrl(row));
+
+      var main = el('div', 'cl-main');
+      var num = el('div', 'cl-n', 'Color ' + (ri + 1));
+      var top = el('div', 'cl-top');
+      var name = document.createElement('input');
+      name.type = 'text'; name.placeholder = 'Color name (e.g. Black)'; name.value = row.name;
+      name.addEventListener('input', function () { row.name = name.value; sync(); });
+      var price = el('span', 'cl-price', priceText());
+      price.setAttribute('data-price', '1');
+      var rm = el('button', 'link', 'remove'); rm.type = 'button';
+      rm.addEventListener('click', function () { rows.splice(ri, 1); render(); sync(); });
+      top.appendChild(name); top.appendChild(price); top.appendChild(rm);
+
+      row.urls = row.urls.filter(function (u) { return u.trim(); });
+      var pics = el('div', 'cl-pics');
+      row.urls.forEach(function (u, ui) {
+        var tile = el('div', 'cl-pic');
+        var img = document.createElement('img');
+        img.alt = ''; img.src = u;
+        var lab = el('span', 'cl-pl', LABELS[ui] || 'Photo ' + (ui + 1));
+        var x = el('button', 'cl-px', '×'); x.type = 'button';
+        x.setAttribute('aria-label', 'Remove photo');
+        x.addEventListener('click', function () { row.urls.splice(ui, 1); render(); sync(); });
+        tile.appendChild(img); tile.appendChild(lab); tile.appendChild(x);
+        pics.appendChild(tile);
+      });
+      var addTile = el('button', 'cl-pic cl-padd', '+'); addTile.type = 'button';
+      addTile.setAttribute('aria-label', 'Add photo');
+      pics.appendChild(addTile);
+
+      var linkBox = el('div', 'cl-link'); linkBox.hidden = true;
+      var linkIn = document.createElement('input');
+      linkIn.type = 'text'; linkIn.placeholder = 'Paste the photo link';
+      var linkOk = el('button', 'btn sm', 'Add'); linkOk.type = 'button';
+      function commit() {
+        var u = linkIn.value.trim();
+        if (!u) return;
+        row.urls.push(u); render(); sync();
+      }
+      linkOk.addEventListener('click', commit);
+      linkIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+      linkBox.appendChild(linkIn); linkBox.appendChild(linkOk);
+      addTile.addEventListener('click', function () { linkBox.hidden = !linkBox.hidden; if (!linkBox.hidden) linkIn.focus(); });
+
+      main.appendChild(num); main.appendChild(top); main.appendChild(pics); main.appendChild(linkBox);
+      card.appendChild(thumb); card.appendChild(main);
+      list.appendChild(card);
+    });
+    addBtn.textContent = '+ Add color ' + (rows.length + 1);
+  }
+
+  addBtn.addEventListener('click', function () {
+    rows.push({name: '', urls: ['', '']});
+    render(); sync();
+    var inputs = list.querySelectorAll('.cl-top input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+  if (priceInput) priceInput.addEventListener('input', function () {
+    var t = priceText();
+    list.querySelectorAll('[data-price]').forEach(function (s) { s.textContent = t; });
+  });
+  form.addEventListener('submit', sync);
+  render(); sync();
+})();
+</script>"""
+
+
+def _size_rows(v: dict) -> str:
+    """One row per size: tick = sold in this size, 'Out of stock' tick = this size is sold out."""
+    chosen = [s.strip() for s in (v.get("sizes") or "").split(",") if s.strip()]
+    sold = set(v.get("sold_out") or [])
+    names = list(dict.fromkeys(chosen))  # only this product's own sizes
+    rows = []
+    for n in names:
+        on, out = n in chosen, n in sold and n in chosen
+        cls = ("" if on else " off") + (" sold" if out else "")
+        rows.append(
+            f'<div class="sz-row{cls}" data-size="{escape(n)}">'
+            f'<label><input type="checkbox" class="sz-on" value="{escape(n)}"{" checked" if on else ""}>'
+            f'<span class="sz-name">{escape(n)}</span></label>'
+            f'<label class="sz-oos"><input type="checkbox" class="sz-out" name="sold_out" value="{escape(n)}"'
+            f'{" checked" if out else ""}{"" if on else " disabled"}> Out of stock</label>'
+            f'<button type="button" class="sz-rm" aria-label="Remove size {escape(n)}">&times;</button></div>')
+    return "".join(rows)
+
+
+SIZE_JS = r"""<script>
+/* Sizes: ticking a size sells it; "Out of stock" marks just that size sold out */
+(function () {
+  var box = document.getElementById('sz-list');
+  if (!box) return;
+  var field = document.getElementById('sz-field');
+  function sync() {
+    var on = [];
+    box.querySelectorAll('.sz-row').forEach(function (row) {
+      var a = row.querySelector('.sz-on'), b = row.querySelector('.sz-out');
+      if (a.checked) on.push(a.value);
+      b.disabled = !a.checked;
+      if (!a.checked) b.checked = false;
+      row.classList.toggle('off', !a.checked);
+      row.classList.toggle('sold', a.checked && b.checked);
+    });
+    field.value = on.join(', ');
+  }
+  box.addEventListener('change', sync);
+  box.addEventListener('click', function (e) {
+    var b = e.target.closest('.sz-rm');
+    if (b) { b.closest('.sz-row').remove(); sync(); }
+  });
+  function addSize() {
+    var inp = document.getElementById('sz-new');
+    var n = inp.value.replace(/[,|=]+/g, ' ').trim().toUpperCase();
+    if (!n) return;
+    var exists = false;
+    box.querySelectorAll('.sz-on').forEach(function (c) { if (c.value === n) { c.checked = true; exists = true; } });
+    if (!exists) {
+      var row = document.createElement('div');
+      row.className = 'sz-row'; row.setAttribute('data-size', n);
+      row.innerHTML = '<label><input type="checkbox" class="sz-on" checked><span class="sz-name"></span></label>' +
+        '<label class="sz-oos"><input type="checkbox" class="sz-out" name="sold_out"> Out of stock</label>' +
+        '<button type="button" class="sz-rm" aria-label="Remove size">&times;</button>';
+      row.querySelector('.sz-on').value = n;
+      row.querySelector('.sz-out').value = n;
+      row.querySelector('.sz-name').textContent = n;
+      box.appendChild(row);
+    }
+    inp.value = ''; sync();
+  }
+  document.getElementById('sz-add').addEventListener('click', addSize);
+  document.getElementById('sz-new').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addSize(); }
+  });
+  box.closest('form').addEventListener('submit', sync);
+  sync();
+})();
+</script>"""
+
+
 def product_form_page(v: dict, categories: list, subcategories: dict, error: str | None = None,
                       product_id: str | None = None, msg: str | None = None) -> str:
     def opt(val, label, current):
@@ -223,6 +502,7 @@ def product_form_page(v: dict, categories: list, subcategories: dict, error: str
                   if editing else
                   f'<input type="text" name="slug" value="{escape(v.get("slug", ""))}" placeholder="made from the name if left empty">')
     action = f"/admin/products/{product_id}" if editing else "/admin/products/new"
+    rows_json = escape(json.dumps(_color_rows(v)))
     body = f"""<div class="head"><div><h1>{"Edit product" if editing else "New product"}</h1>
 <p class="sub"><a href="/admin/products" class="link" style="padding:0">&larr; Back to products</a></p></div></div>
 {err}
@@ -236,43 +516,48 @@ def product_form_page(v: dict, categories: list, subcategories: dict, error: str
 <div class="fg"><label class="f">Sub-category</label><select name="subcategory">{subs}</select></div>
 <div class="fg"><label class="f">Price (EGP)</label><input type="number" name="price" min="0" step="0.01" value="{escape(v.get('price', ''))}" required></div>
 </div>
-<div class="two">
-<div class="fg"><label class="f">Sizes</label><input type="text" name="sizes" value="{escape(v.get('sizes', ''))}">
-<p class="hint">Separate with commas.</p></div>
-<div class="fg"><label class="f">Colors</label><input type="text" name="colors" value="{escape(v.get('colors', ''))}">
-<p class="hint">Separate with commas.</p></div>
-</div>
+<div class="fg"><label class="f">Sizes</label>
+<div class="sz" id="sz-list">{_size_rows(v)}</div>
+<input type="hidden" name="sizes" id="sz-field" value="{escape(v.get('sizes', ''))}">
+<div class="sz-add"><input type="text" id="sz-new" placeholder="Other size (e.g. 3XL, 32)" autocomplete="off"><button type="button" class="btn sm ghost" id="sz-add">+ Add size</button></div>
+<p class="hint">Use × to remove a size. Tick "Out of stock" on a size to hide just that size from buyers.</p></div>
 <label class="check"><input type="checkbox" name="in_stock" value="1"{" checked" if v.get("in_stock") else ""}> In stock</label>
+<p class="hint">Untick to mark the whole product out of stock.</p>
 </div>
 <div class="card">
 <div class="fg"><label class="f">Main photo URL</label><input type="text" name="image_url" value="{escape(v.get('image_url', ''))}">
 <p class="hint">Used for social sharing and as the fallback. If you leave it empty, the first color photo is used.</p></div>
-<div class="fg" style="margin-bottom:0"><label class="f">Photos per color</label>
-<textarea name="photos" style="min-height:130px" placeholder="Black = front-url | back-url | model-url">{escape(v.get('photos', ''))}</textarea>
-<p class="hint">One color per line, photo links separated by <b>|</b>. The first link is shown as Front and the second as Back.
-The color name must match the Colors field exactly.</p></div>
+<div class="fg" style="margin-bottom:0"><label class="f">Colors &amp; photos</label>
+<div id="cl-list" data-rows="{rows_json}"></div>
+<button type="button" class="btn sm ghost" id="cl-add">+ Add color</button>
+<input type="hidden" name="colors" id="cl-colors" value="{escape(v.get('colors', ''))}">
+<textarea name="photos" id="cl-photos" style="display:none">{escape(v.get('photos', ''))}</textarea>
+<p class="hint">One card per color. Photos show as Front, Back, then Photo 3 and so on. Tap × to remove one, or + to add another by pasting its link.
+The price on each color is the product price above.</p></div>
 </div>
-<button class="btn">{"Save changes" if editing else "Add product"}</button>
-</form>"""
+<button class="btn" style="width:100%">{"Save changes" if editing else "Add product"}</button>
+</form>
+{SIZE_JS}{COLOR_EDITOR_JS}"""
     return admin_page("Edit product" if editing else "New product", body, "products", msg)
 
 
 # --------------------------------------------------------------- orders ----
-def _order_card(o: dict, q: str) -> str:
+def _order_card(o: dict, q: str, view: str = "active") -> str:
     items = o.get("order_items") or []
     subtotal = sum(float(i["unit_price"]) * int(i["quantity"]) for i in items)
     pay = PAYMENT_METHODS.get(o.get("payment_method"), {}).get("label") or (o.get("payment_method") or "")
     status = o.get("status") or "new"
     pstatus = o.get("payment_status") or "pending"
     cls = "good" if status in ("delivered", "shipped") else ("ok" if status in ("new", "confirmed") else "")
-    rows = "".join(
-        f"<tr><td>{escape(i['product_name'])}"
-        f"<br><span class='s'>{escape(' / '.join(x for x in [i.get('size'), i.get('color')] if x))}</span></td>"
-        f"<td class='r'>{int(i['quantity'])}</td><td class='r'>{_money(i['unit_price'])}</td>"
-        f"<td class='r'>{_money(float(i['unit_price']) * int(i['quantity']))}</td></tr>" for i in items)
+    pcls = "good" if pstatus == "paid" else ""
+    item_rows = "".join(
+        f"""<div class="oi"><div class="grow"><p class="t">{escape(i['product_name'])}</p>
+<p class="s">{escape(' / '.join(x for x in [i.get('size'), i.get('color')] if x))}</p></div>
+<div class="oi-r"><span class="s">{int(i['quantity'])} × {_money(i['unit_price'])}</span>
+<strong>{_money(float(i['unit_price']) * int(i['quantity']))}</strong></div></div>""" for i in items)
     email = (f'<a class="u" href="mailto:{escape(o["email"])}">{escape(o["email"])}</a>'
-             if o.get("email") else '<span>No email given</span>')
-    proof = (f'<p><a class="u" href="{escape(o["payment_proof_url"])}" target="_blank" rel="noopener">View payment proof</a></p>'
+             if o.get("email") else '<span class="mut">Not given</span>')
+    proof = (f'<div class="kv"><span class="l">Proof</span><a class="u" href="{escape(o["payment_proof_url"])}" target="_blank" rel="noopener">View payment proof</a></div>'
              if o.get("payment_proof_url") else "")
 
     def sel(name, values, current):
@@ -280,34 +565,52 @@ def _order_card(o: dict, q: str) -> str:
         return f'<select name="{name}">' + "".join(
             f'<option value="{escape(x)}"{" selected" if x == current else ""}>{escape(x.title())}</option>' for x in vals) + "</select>"
 
+    # a cancelled order has no payment: show and edit only its status, so it can be brought back
+    cancelled = status == "cancelled"
+    pay_status = "" if cancelled else (
+        f'<div class="kv"><span class="l">Status</span><span class="badge {pcls}">{escape(pstatus)}</span></div>')
+    status_field = f'<div><label class="f">Order status</label>{sel("status", ORDER_STATUSES, status)}</div>'
+    payment_field = f'<div><label class="f">Payment</label>{sel("payment_status", PAYMENT_STATUSES, pstatus)}</div>'
+    update_fields = (
+        status_field + '<p class="hint">Cancelled orders have no payment. Change the status to bring this order back.</p>'
+        if cancelled else f'<div class="pair">{status_field}{payment_field}</div>')
+
     return f"""<details class="order"><summary>
 <div class="grow"><p class="t">#{escape(o['order_number'])} · {escape(o['customer_name'])}</p>
 <p class="s">{_dt(o.get('created_at'))} · {len(items)} item{'s' if len(items) != 1 else ''}</p></div>
 <span class="badge {cls}">{escape(status)}</span><strong>{_money(o['total'])}</strong></summary>
 <div class="ob">
-<div><h3>Customer</h3><p>{escape(o['customer_name'])}</p>
-<p><a class="u" href="tel:{escape(o['phone'])}">{escape(o['phone'])}</a></p><p>{email}</p>
-<p><span>{escape(o['address'])}, {escape(o['city'])}</span></p></div>
-<div><h3>Items</h3><table class="items"><tr><th>Item</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Total</th></tr>{rows}</table>
-<div style="margin-top:10px"><div class="sum"><span>Subtotal</span><span>{_money(subtotal)}</span></div>
+<section class="op"><h3>Customer</h3>
+<div class="kv"><span class="l">Name</span><b>{escape(o['customer_name'])}</b></div>
+<div class="kv"><span class="l">Phone</span><a class="u" href="tel:{escape(o['phone'])}">{escape(o['phone'])}</a></div>
+<div class="kv"><span class="l">Email</span>{email}</div>
+<div class="kv"><span class="l">Address</span><b>{escape(o['address'])}, {escape(o['city'])}</b></div></section>
+<section class="op"><h3>Items<small>{len(items)}</small></h3>{item_rows}
+<div class="ot"><div class="sum"><span>Subtotal</span><span>{_money(subtotal)}</span></div>
 <div class="sum"><span>Shipping ({escape(o['city'])})</span><span>{_money(o.get('shipping'))}</span></div>
-<div class="sum tot"><span>Total</span><span>{_money(o['total'])}</span></div></div></div>
-<div><h3>Payment</h3><p>{escape(pay)} · <span>{escape(pstatus)}</span></p>{proof}</div>
-<form method="post" action="/admin/orders/{o['id']}/status"><h3>Update</h3><input type="hidden" name="q" value="{escape(q)}">
-<div class="st"><div class="fg"><label class="f">Order status</label>{sel('status', ORDER_STATUSES, status)}</div>
-<div class="fg"><label class="f">Payment</label>{sel('payment_status', PAYMENT_STATUSES, pstatus)}</div>
-<button class="btn sm">Save</button></div></form>
-<form method="post" action="/admin/orders/{o['id']}/delete" onsubmit="return confirm('Move this order to Recently Deleted?')">
-<input type="hidden" name="q" value="{escape(q)}"><button class="link" style="padding-left:0">Delete order</button></form>
+<div class="sum tot"><span>Total</span><span>{_money(o['total'])}</span></div></div></section>
+<section class="op"><h3>Payment</h3>
+<div class="kv"><span class="l">Method</span><b>{escape(pay)}</b></div>
+{pay_status}{proof}</section>
+<form method="post" action="/admin/orders/{o['id']}/status" class="op"><h3>Update</h3>
+<input type="hidden" name="q" value="{escape(q)}"><input type="hidden" name="view" value="{escape(view)}">
+{update_fields}
+<button class="btn" style="width:100%;margin-top:12px">Save</button></form>
+<form method="post" action="/admin/orders/{o['id']}/delete" style="margin:0" onsubmit="return confirm('Move this order to Recently Deleted?')">
+<input type="hidden" name="q" value="{escape(q)}"><input type="hidden" name="view" value="{escape(view)}"><button class="link" style="padding-left:0">Delete order</button></form>
 </div></details>"""
 
 
-def orders_page(orders: list, q: str, msg: str | None = None) -> str:
-    cards = "".join(_order_card(o, q) for o in orders)
+def orders_page(orders: list, q: str, msg: str | None = None, view: str = "active") -> str:
+    cards = "".join(_order_card(o, q, view) for o in orders)
     if not cards:
-        cards = f'<div class="empty">{"No orders match that search." if q else "No orders yet."}</div>'
+        cards = f'<div class="empty">{"No orders match that search." if q else "No orders in this tab."}</div>'
+    tabs = "".join(
+        f'<a href="/admin/orders?view={k}" class="tab {k}{" on" if k == view else ""}">{label}</a>'
+        for k, label in ORDER_VIEWS)
     body = f"""<div class="head"><div><h1>Orders</h1><p class="sub">Newest first · tap an order for the full details</p></div></div>
-<form class="search" method="get" action="/admin/orders"><input type="search" name="q" value="{escape(q)}" data-live autocomplete="off"
+<div class="tabs">{tabs}</div>
+<form class="search" method="get" action="/admin/orders"><input type="hidden" name="view" value="{escape(view)}"><input type="search" name="q" value="{escape(q)}" data-live autocomplete="off"
 placeholder="Search order number, name, phone or email"></form><div id="results">{cards}</div>"""
     return admin_page("Orders", body, "orders", msg)
 
@@ -341,22 +644,28 @@ def promotions_page(promos: list, msg: str | None = None, error: str | None = No
             _dt(p.get("ends_at")).split(",")[0] if p.get("ends_at") else ""] if x)
         link = f" · {escape(p['link_text'] or '')} → {escape(p['link_url'])}" if p.get("link_url") else ""
         flip = "Turn off" if p.get("is_active") else "Turn on"
-        rows.append(f"""<div class="row"><div class="grow"><p class="t">{escape(p['message'])}</p>
-<p class="s">{escape(dates) or 'No dates set'}{link}</p></div><span class="badge {cls}">{text}</span>
-<div class="acts"><form method="post" action="/admin/promotions/{p['id']}/toggle"><button class="link">{flip}</button></form>
-<form method="post" action="/admin/promotions/{p['id']}/delete" onsubmit="return confirm('Move this promotion to Recently Deleted?')">
+        rows.append(f"""<div class="pc"><div class="pc-band"><span class="k">Banner</span><span class="badge {cls}">{text}</span></div>
+<div class="pc-body"><p class="t" style="font-size:16px">{escape(p['message'])}</p>
+<p class="s">{escape(dates) or 'No dates set'}{link}</p></div>
+<div class="pc-foot"><form method="post" action="/admin/promotions/{p['id']}/toggle"><button class="btn sm ghost">{flip}</button></form>
+<form method="post" action="/admin/promotions/{p['id']}/delete" style="margin-left:auto" onsubmit="return confirm('Move this promotion to Recently Deleted?')">
 <button class="link">Delete</button></form></div></div>""")
     listing = "".join(rows) or '<div class="empty">No promotions yet.</div>'
     body = f"""<div class="head"><div><h1>Promotions</h1>
 <p class="sub">Live promotions appear in a gold bar at the top of the website (changes show within a minute).</p></div></div>{err}
-<form method="post" action="/admin/promotions/new" class="card">
+<details class="newp"{" open" if error else ""}><summary class="btn">+ New promotion</summary>
+<form method="post" action="/admin/promotions/new">
+<section class="sect"><div class="sect-h"><b>1</b><h2>Promotion</h2></div><div class="sect-b">
 <div class="fg"><label class="f">Promotion text</label><input type="text" name="message" maxlength="160" value="{escape(f.get('message', ''))}"
 placeholder="e.g. Free shipping on orders over 1500 EGP" required></div>
-<div class="two"><div class="fg"><label class="f">Button text (optional)</label><input type="text" name="link_text" value="{escape(f.get('link_text', ''))}" placeholder="Shop now"></div>
-<div class="fg"><label class="f">Link (optional)</label><input type="text" name="link_url" value="{escape(f.get('link_url', ''))}" placeholder="/shop?category=pants"></div></div>
-<div class="two"><div class="fg"><label class="f">Starts (optional)</label><input type="date" name="starts" value="{escape(f.get('starts', ''))}"></div>
-<div class="fg"><label class="f">Ends (optional)</label><input type="date" name="ends" value="{escape(f.get('ends', ''))}"></div></div>
-<button class="btn">Add promotion</button></form>{listing}"""
+<div class="two"><div class="fg" style="margin-bottom:0"><label class="f">Button text (optional)</label><input type="text" name="link_text" value="{escape(f.get('link_text', ''))}" placeholder="Shop now"></div>
+<div class="fg" style="margin-bottom:0"><label class="f">Link (optional)</label><input type="text" name="link_url" value="{escape(f.get('link_url', ''))}" placeholder="/shop?category=pants"></div></div>
+</div></section>
+<section class="sect"><div class="sect-h"><b>2</b><h2>Schedule</h2></div><div class="sect-b">
+<div class="two"><div class="fg" style="margin-bottom:0"><label class="f">Starts (optional)</label><input type="date" name="starts" value="{escape(f.get('starts', ''))}"></div>
+<div class="fg" style="margin-bottom:0"><label class="f">Ends (optional)</label><input type="date" name="ends" value="{escape(f.get('ends', ''))}"></div></div>
+</div></section>
+<button class="btn" style="width:100%">Add promotion</button></form></details>{listing}"""
     return admin_page("Promotions", body, "promotions", msg)
 
 
