@@ -8,8 +8,7 @@ PAYMENT_PROOF_BUCKET = "payment_proofs"
 
 def upload_payment_proof(file_bytes: bytes, content_type: str, filename: str) -> str:
     """Uploads a payment-proof screenshot to a private Supabase Storage
-    bucket and returns a long-lived signed URL (10 years) so it's directly
-    viewable later without building a separate admin tool to generate one."""
+    bucket and returns a long-lived signed URL (10 years)."""
     ext = (filename.rsplit(".", 1)[-1] if "." in filename else "jpg").lower()
     path = f"{uuid.uuid4().hex}.{ext}"
     supabase.storage.from_(PAYMENT_PROOF_BUCKET).upload(
@@ -20,8 +19,9 @@ def upload_payment_proof(file_bytes: bytes, content_type: str, filename: str) ->
 
 
 def create_order(customer_name: str, phone: str, city: str, address: str,
-                  lines: list[dict], subtotal: float, payment_method: str = "cod",
-                  payment_proof_url: str | None = None, pricing: dict | None = None) -> str:
+                 lines: list[dict], subtotal: float, payment_method: str = "cod",
+                 payment_proof_url: str | None = None, pricing: dict | None = None,
+                 email: str = "", delivery_notes: str = "") -> str:
     pricing = pricing or {}
     discount = float(pricing.get("discount") or 0)
     shipping = 0 if pricing.get("free_shipping") else SHIPPING_RATES.get(city, 0)
@@ -38,8 +38,10 @@ def create_order(customer_name: str, phone: str, city: str, address: str,
         "order_number": order_number,
         "customer_name": customer_name,
         "phone": phone,
+        "email": email or None,
         "address": address,
         "city": city,
+        "delivery_notes": delivery_notes or None,
         "payment_method": payment_method,
         "payment_status": "pending",
         "payment_proof_url": payment_proof_url,

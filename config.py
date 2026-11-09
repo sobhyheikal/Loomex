@@ -91,3 +91,7 @@ SHIPPING_RATES = {
     "Ajmi To Alex": 80,
     "Ajmi To Ajmi": 60,
 }
+
+# Text shown in the delivery box at checkout, e.g. "Delivery in 3 to 5 days".
+# Leave empty to hide the box.
+DELIVERY_TIME_TEXT = ""

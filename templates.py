@@ -1628,8 +1628,29 @@ CHECKOUT_CSS = """
 </style>
 """
 
+CHECKOUT_FORM_CSS = """
+<style>
+.checkout-section-title { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; margin: 26px 0 4px; }
+#checkout-form .form-group label { text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; font-weight: 700; }
+#checkout-form input[type=text], #checkout-form input[type=tel], #checkout-form input[type=email],
+#checkout-form select, #checkout-form textarea { border-radius: 14px; padding: 14px 16px; }
+#checkout-form textarea { display: block; width: 100%; min-height: 110px; resize: vertical; font: inherit;
+  color: inherit; background: transparent; border: 1px solid rgba(255,255,255,0.25); box-sizing: border-box; }
+#checkout-form input[readonly] { opacity: 0.7; cursor: not-allowed; }
+.optional-tag { text-transform: uppercase; font-weight: 600; opacity: 0.7; }
+.delivery-box { display: flex; align-items: center; gap: 14px; margin: 22px 0 0; padding: 16px 18px;
+  border-radius: 16px; border: 1px solid rgba(193,154,87,0.35); background: rgba(193,154,87,0.08); }
+.delivery-icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; background: rgba(193,154,87,0.18); color: #c19a57; flex: none; }
+.delivery-box strong { font-size: 14px; }
+#place-order-btn { border-radius: 999px; width: 100%; }
+</style>
+"""
+
+
 def checkout_page(lines: list, subtotal: float, categories: list, cart_count: int = 0, error: str | None = None,
                    subcategories: dict | None = None, pricing: dict | None = None) -> str:
+    from config import DELIVERY_TIME_TEXT
     pricing = pricing or {}
     discount = float(pricing.get("discount") or 0)
     free_ship = bool(pricing.get("free_shipping"))
@@ -1664,8 +1685,19 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
     cod_label = cod.get("label", "Cash on Delivery")
     cod_desc = cod.get("description", "Pay in cash when your order arrives.")
 
+    delivery_box = ""
+    if (DELIVERY_TIME_TEXT or "").strip():
+        delivery_box = (
+            '<div class="delivery-box"><span class="delivery-icon">'
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+            'stroke-linecap="round" stroke-linejoin="round"><path d="M1 6h13v10H1z"/><path d="M14 9h4l3 3v4h-7z"/>'
+            '<circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>'
+            f'<strong>{escape(DELIVERY_TIME_TEXT.strip())}</strong></div>'
+        )
+
     body = f"""
 {CHECKOUT_CSS}
+{CHECKOUT_FORM_CSS}
 <div class="wrap">
   <h1 class="display">Checkout</h1>
   <p class="sub">Almost there — fill in your details below.</p>
@@ -1685,37 +1717,67 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
     <span>Total</span>
     <span id="total-amount">{net:.0f} EGP</span>
   </div>
-  <p class="checkout-hint" id="shipping-hint"{hint_style}>Select your city below to see the shipping cost.</p>
+  <p class="checkout-hint" id="shipping-hint"{hint_style}>Select your delivery zone below to see the shipping cost.</p>
   {error_html}
 
-  <p class="checkout-required">All fields marked <span class="req">*</span> are required.</p>
+  <h2 class="checkout-section-title">Delivery details</h2>
+  <p class="checkout-required"><span class="req">*</span> All fields marked are required.</p>
 
   <form action="/checkout" method="post" enctype="multipart/form-data" id="checkout-form" novalidate style="margin-top:10px;">
     <div class="form-group">
       <label for="f-customer_name">Full name <span class="req">*</span></label>
-      <input type="text" name="customer_name" id="f-customer_name" required maxlength="80" autocomplete="name"
-        placeholder="First and last name">
+      <input type="text" name="customer_name" id="f-customer_name" required maxlength="80" autocomplete="name">
       <p class="field-error" id="err-customer_name" hidden></p>
     </div>
     <div class="form-group">
       <label for="f-phone">Phone number <span class="req">*</span></label>
       <input type="tel" name="phone" id="f-phone" required maxlength="20" inputmode="tel" autocomplete="tel"
-        placeholder="01xxxxxxxxx">
+        placeholder="01012345678">
       <p class="field-error" id="err-phone" hidden></p>
     </div>
     <div class="form-group">
-      <label for="city-select">City <span class="req">*</span></label>
+      <label for="f-email">Email address <span class="req">*</span></label>
+      <input type="email" name="email" id="f-email" required maxlength="120" inputmode="email" autocomplete="email"
+        placeholder="you@example.com">
+      <p class="field-error" id="err-email" hidden></p>
+    </div>
+    <div class="form-group">
+      <label for="city-select">Delivery zone <span class="req">*</span></label>
       <select name="city" id="city-select" required onchange="loomexUpdateShipping(this.value)">
-        <option value="" disabled selected>Select your city</option>
+        <option value="" disabled selected>Select…</option>
         {city_options}
       </select>
       <p class="field-error" id="err-city" hidden></p>
     </div>
     <div class="form-group">
-      <label for="f-address">Full address <span class="req">*</span></label>
-      <input type="text" name="address" id="f-address" required maxlength="200" autocomplete="street-address"
-        placeholder="Street, building number, floor, area">
-      <p class="field-error" id="err-address" hidden></p>
+      <label for="f-country">Country <span class="req">*</span></label>
+      <input type="text" id="f-country" value="Egypt" readonly tabindex="-1">
+    </div>
+    <div class="form-group">
+      <label for="f-street">Street <span class="req">*</span></label>
+      <input type="text" name="street" id="f-street" required maxlength="120" autocomplete="address-line1"
+        placeholder="e.g. Street 66 / El Tahrir St.">
+      <p class="field-error" id="err-street" hidden></p>
+    </div>
+    <div class="form-group">
+      <label for="f-area">Area / Neighborhood <span class="req">*</span></label>
+      <input type="text" name="area" id="f-area" required maxlength="80" autocomplete="address-level3"
+        placeholder="e.g. Smouha, Maadi, Sheikh Zayed">
+      <p class="field-error" id="err-area" hidden></p>
+    </div>
+    <div class="form-group">
+      <label for="f-building">Building no. / Name <span class="req">*</span></label>
+      <input type="text" name="building" id="f-building" required maxlength="60">
+      <p class="field-error" id="err-building" hidden></p>
+    </div>
+    <div class="form-group">
+      <label for="f-floor">Floor / Apartment <span class="req">*</span></label>
+      <input type="text" name="floor" id="f-floor" required maxlength="60" placeholder="e.g. 3rd floor, apt 7">
+      <p class="field-error" id="err-floor" hidden></p>
+    </div>
+    <div class="form-group">
+      <label for="f-notes">Delivery notes <span class="optional-tag">· optional</span></label>
+      <textarea name="delivery_notes" id="f-notes" maxlength="500"></textarea>
     </div>
 
     <span class="field-label">Payment method <span class="req">*</span></span>
@@ -1730,7 +1792,9 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
       and we'll arrange it with you.
     </p>
 
-    <button class="btn" type="submit" id="place-order-btn" style="margin-top:20px;">Review &amp; Place Order</button>
+    {delivery_box}
+
+    <button class="btn" type="submit" id="place-order-btn" style="margin-top:20px;">Place Order</button>
   </form>
 </div>
 
@@ -1771,16 +1835,10 @@ function loomexSetError(fieldId, errId, msg) {{
   }}
   return !msg;
 }}
-function loomexHasLetter(str) {{
-  for (var i = 0; i < str.length; i++) {{
-    var c = str.charAt(i), code = str.charCodeAt(i);
-    if (c.toLowerCase() !== c.toUpperCase() || (code >= 1536 && code <= 1791)) return true;
-  }}
-  return false;
+function loomexVal(id) {{
+  return document.getElementById(id).value.trim().replace(/ +/g, ' ');
 }}
-function loomexCleanName() {{
-  return document.getElementById('f-customer_name').value.trim().replace(/ +/g, ' ');
-}}
+function loomexCleanName() {{ return loomexVal('f-customer_name'); }}
 function loomexNormPhone(raw) {{
   var p = raw.replace(/[^0-9+]/g, '');
   if (p.indexOf('+20') === 0) p = '0' + p.slice(3);
@@ -1805,21 +1863,28 @@ function loomexCheckPhone() {{
     msg = 'Enter a valid Egyptian mobile number, like 01012345678.';
   return loomexSetError('f-phone', 'err-phone', msg);
 }}
+function loomexCheckEmail() {{
+  var v = document.getElementById('f-email').value.trim(), msg = '';
+  if (!v) msg = 'Please enter your email address.';
+  else if (!/^[^@ ]+@[^@ ]+[.][^@ ]+$/.test(v)) msg = 'Please enter a valid email address.';
+  return loomexSetError('f-email', 'err-email', msg);
+}}
 function loomexCheckCity() {{
-  var msg = document.getElementById('city-select').value ? '' : 'Please select your city.';
+  var msg = document.getElementById('city-select').value ? '' : 'Please select your delivery zone.';
   return loomexSetError('city-select', 'err-city', msg);
 }}
-function loomexCheckAddress() {{
-  var v = document.getElementById('f-address').value.trim().replace(/ +/g, ' '), msg = '';
-  if (!v) msg = 'Please enter your full address.';
-  else if (v.length < 10 || !loomexHasLetter(v))
-    msg = 'Please enter your full address: street, building number and area (at least 10 characters).';
-  return loomexSetError('f-address', 'err-address', msg);
+function loomexRequired(id, errId, msg) {{
+  return loomexSetError(id, errId, loomexVal(id) ? '' : msg);
 }}
+function loomexCheckStreet() {{ return loomexRequired('f-street', 'err-street', 'Please enter your street.'); }}
+function loomexCheckArea() {{ return loomexRequired('f-area', 'err-area', 'Please enter your area or neighborhood.'); }}
+function loomexCheckBuilding() {{ return loomexRequired('f-building', 'err-building', 'Please enter your building number or name.'); }}
+function loomexCheckFloor() {{ return loomexRequired('f-floor', 'err-floor', 'Please enter your floor or apartment.'); }}
 
 var LOOMEX_CHECKS = [
-  ['f-customer_name', loomexCheckName], ['f-phone', loomexCheckPhone],
-  ['city-select', loomexCheckCity], ['f-address', loomexCheckAddress]
+  ['f-customer_name', loomexCheckName], ['f-phone', loomexCheckPhone], ['f-email', loomexCheckEmail],
+  ['city-select', loomexCheckCity], ['f-street', loomexCheckStreet], ['f-area', loomexCheckArea],
+  ['f-building', loomexCheckBuilding], ['f-floor', loomexCheckFloor]
 ];
 LOOMEX_CHECKS.forEach(function (c) {{
   var el = document.getElementById(c[0]);
@@ -1842,8 +1907,12 @@ function loomexOpenReview() {{
   rows.innerHTML = '';
   rows.appendChild(loomexRow('Name', loomexCleanName()));
   rows.appendChild(loomexRow('Phone', document.getElementById('f-phone').value));
-  rows.appendChild(loomexRow('City', city));
-  rows.appendChild(loomexRow('Address', document.getElementById('f-address').value.trim()));
+  rows.appendChild(loomexRow('Email', document.getElementById('f-email').value.trim()));
+  rows.appendChild(loomexRow('Delivery zone', city));
+  rows.appendChild(loomexRow('Address', loomexVal('f-street') + ', ' + loomexVal('f-area') + ', Building ' +
+    loomexVal('f-building') + ', Floor/Apt ' + loomexVal('f-floor')));
+  var notes = loomexVal('f-notes');
+  if (notes) rows.appendChild(loomexRow('Notes', notes));
   rows.appendChild(loomexRow('Payment', 'Cash on Delivery'));
   rows.appendChild(loomexRow('Items (after discount)', LOOMEX_SUBTOTAL.toFixed(0) + ' EGP'));
   rows.appendChild(loomexRow('Shipping', LOOMEX_FREE_SHIP ? 'Free' : rate.toFixed(0) + ' EGP'));
@@ -1867,7 +1936,9 @@ LOOMEX_FORM.addEventListener('submit', function (e) {{
   // store the cleaned values so the server always gets a consistent format
   document.getElementById('f-customer_name').value = loomexCleanName();
   document.getElementById('f-phone').value = loomexNormPhone(document.getElementById('f-phone').value);
-  document.getElementById('f-address').value = document.getElementById('f-address').value.trim().replace(/ +/g, ' ');
+  ['f-street', 'f-area', 'f-building', 'f-floor'].forEach(function (id) {{
+    document.getElementById(id).value = loomexVal(id);
+  }});
   loomexOpenReview();
 }});
 document.getElementById('review-edit').addEventListener('click', loomexCloseReview);
