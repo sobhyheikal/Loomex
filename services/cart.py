@@ -38,6 +38,19 @@ def cart_item_count(cart: list[dict]) -> int:
     return sum(item.get("qty", 0) for item in cart)
 
 
+def sold_out_reason(product: dict, size: str = "", color: str = "") -> str | None:
+    """Why this product / size / color can't be bought right now, or None if it can."""
+    if not product.get("in_stock", True):
+        return "This product is sold out."
+    sizes_out = {str(s).strip().lower() for s in (product.get("sold_out_sizes") or [])}
+    colors_out = {str(c).strip().lower() for c in (product.get("sold_out_colors") or [])}
+    if size and size.strip().lower() in sizes_out:
+        return f"Size {size} is sold out."
+    if color and color.strip().lower() in colors_out:
+        return f"{color} is sold out."
+    return None
+
+
 def _line_image(product: dict, color: str):
     """First photo of the chosen color, else the product's main photo."""
     imgs = (product.get("color_images") or {}).get(color)
@@ -54,7 +67,8 @@ def resolve_cart(cart: list[dict]):
     if not cart:
         return [], 0.0
     slugs = list({item["slug"] for item in cart})
-    result = supabase.table("products").select("*").in_("slug", slugs).execute()
+    result = (supabase.table("products").select("*").in_("slug", slugs)
+              .is_("deleted_at", "null").eq("is_visible", True).execute())
     by_slug = {p["slug"]: p for p in result.data}
 
     lines = []
@@ -70,7 +84,7 @@ def resolve_cart(cart: list[dict]):
             "slug": p["slug"],
             "name": p["name"],
             "price": float(p["price"]),
-                        "image_url": _line_image(p, item.get("color", "")),
+            "image_url": _line_image(p, item.get("color", "")),
             "size": item.get("size", ""),
             "color": item.get("color", ""),
             "qty": item["qty"],

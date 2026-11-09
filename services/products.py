@@ -1,8 +1,13 @@
 from supabase_client import supabase
 
 
+def _live(query):
+    """Only products that are not deleted and are switched ON in the admin panel."""
+    return query.is_("deleted_at", "null").eq("is_visible", True)
+
+
 def get_product_or_404(slug: str):
-    result = supabase.table("products").select("*").eq("slug", slug).maybe_single().execute()
+    result = _live(supabase.table("products").select("*").eq("slug", slug)).maybe_single().execute()
     return result.data if result else None
 
 
@@ -16,10 +21,11 @@ def list_shop_products(category: str | None, subcategory: str | None,
     `category` itself is passed through unchanged either way (same as the
     original inline logic).
 
+    Deleted products and products switched OFF in the admin are never listed.
     Sold-out products are INCLUDED (the page shows them with a "Sold out"
     badge). They are listed after the products that are still available;
     inside each group the newest products come first."""
-    query = supabase.table("products").select("*")
+    query = _live(supabase.table("products").select("*"))
     if category in categories:
         query = query.eq("category", category)
         if subcategory in subcategories_map.get(category, []):
@@ -42,20 +48,29 @@ def list_shop_products(category: str | None, subcategory: str | None,
 # ----------------------------------------------------------------------
 # STOCK HELPERS
 #   products.in_stock            -> False means the WHOLE product is sold out
-#   products.out_of_stock_sizes  -> list of sizes that are sold out, e.g. ["M"]
+#   products.sold_out_sizes      -> list of sizes that are sold out, e.g. ["M"]
+#   products.sold_out_colors     -> list of colors that are sold out
 # ----------------------------------------------------------------------
 def _norm(size) -> str:
     return str(size).strip().casefold()
 
 
-def is_sold_out(product: dict) -> bool:
-    """True when the whole product is sold out. A missing/NULL in_stock counts
-    as sold out, because the old shop query (in_stock = true) hid those too."""
-    return not product.get("in_stock")
-
-
 def out_of_stock_sizes(product: dict) -> list:
-    return list(product.get("out_of_stock_sizes") or [])
+    return list(product.get("sold_out_sizes") or product.get("out_of_stock_sizes") or [])
+
+
+def is_sold_out(product: dict) -> bool:
+    """True when nothing can be bought: the product is switched to out of stock,
+    or every size is sold out, or every color is sold out."""
+    if not product.get("in_stock"):
+        return True
+    sizes = product.get("sizes") or []
+    out_s = {_norm(s) for s in out_of_stock_sizes(product)}
+    if sizes and all(_norm(s) in out_s for s in sizes):
+        return True
+    colors = product.get("colors") or []
+    out_c = {_norm(c) for c in (product.get("sold_out_colors") or [])}
+    return bool(colors) and all(_norm(c) in out_c for c in colors)
 
 
 def available_sizes(product: dict) -> list:

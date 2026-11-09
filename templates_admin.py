@@ -48,7 +48,10 @@ a{color:inherit;text-decoration:none;}
 h1{font-family:"Big Shoulders Display",sans-serif;font-size:34px;text-transform:uppercase;margin:0 0 4px;line-height:1;}
 .sub{color:var(--paper-dim);font-size:13px;margin:0 0 20px;}
 .head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
-.flash{border:1px solid var(--gold);background:rgba(199,154,70,.1);padding:10px 14px;font-size:13px;margin-bottom:16px;}
+.flash{position:fixed;top:68px;left:50%;transform:translateX(-50%);z-index:40;width:calc(100% - 36px);max-width:420px;
+  border:1px solid var(--gold);background:#322a1f;box-shadow:0 8px 24px rgba(0,0,0,.45);padding:12px 16px;font-size:13px;
+  text-align:center;transition:opacity .3s ease,transform .3s ease;}
+.flash.gone{opacity:0;transform:translateX(-50%) translateY(-8px);pointer-events:none;}
 .err{border:1px solid var(--gold);background:rgba(199,154,70,.1);padding:10px 14px;font-size:13px;margin-bottom:16px;}
 .err strong{color:var(--gold);}
 .btn{display:inline-block;padding:10px 16px;background:var(--gold);color:var(--ink);border:none;font:600 12.5px Inter,sans-serif;
@@ -149,7 +152,20 @@ details.order .ob{gap:12px;}
 .cl-px{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(32,28,24,.9);color:var(--paper);font-size:16px;line-height:1;cursor:pointer;padding:0;}
 .cl-px:hover{color:var(--gold);}
 .cl-padd{display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--gold);border:1px dashed var(--gold-dim);background:transparent;cursor:pointer;}
+.cl-wait{display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--paper-dim);}
 .cl-link{display:flex;gap:8px;} .cl-link[hidden]{display:none;} .cl-link input{flex:1;min-width:0;}
+.cl-oos{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--paper-dim);cursor:pointer;margin:0;}
+.cl-oos input{width:18px;height:18px;accent-color:var(--gold);margin:0;}
+.cl.sold .cl-n{color:var(--gold);}
+.cl.sold .cl-oos{color:var(--gold);}
+.cl.sold .cl-top input{text-decoration:line-through;color:var(--paper-dim);}
+.swf{display:flex;align-items:center;gap:8px;margin:0 0 0 auto;}
+.sw-l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim);min-width:68px;}
+.sw{position:relative;width:46px;height:26px;border-radius:999px;border:1px solid var(--line);background:rgba(241,236,226,.12);cursor:pointer;padding:0;transition:background .15s;}
+.sw .sw-knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--paper-dim);transition:transform .15s,background .15s;}
+.sw.on{background:var(--gold);border-color:var(--gold);}
+.sw.on .sw-knob{transform:translateX(20px);background:var(--ink);}
+.row.is-hidden .thumb,.row.is-hidden .grow{opacity:.5;}
 @media(max-width:560px){.two,.three{grid-template-columns:1fr;} h1{font-size:30px;}}
 </style>
 """
@@ -180,7 +196,7 @@ TRASH_ICON = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 
 def admin_page(title: str, body: str, active: str = "", msg: str | None = None) -> str:
     links = "".join(f'<a href="/admin/{k}" class="dl{" on" if k == active else ""}">{label}</a>' for k, label in NAV)
-    flash = f'<div class="flash">{escape(msg)}</div>' if msg else ""
+    flash = f'<div class="flash" id="flash" role="status">{escape(msg)}</div>' if msg else ""
     on = " on" if active == "deleted" else ""
     trash = f'<a href="/admin/deleted" class="trash{on}" aria-label="Recently Deleted" title="Recently Deleted">{TRASH_ICON}</a>'
     return f"""<!DOCTYPE html>
@@ -197,9 +213,23 @@ def admin_page(title: str, body: str, active: str = "", msg: str | None = None) 
   <a href="/admin/orders" class="logo">LOOM<span>EX</span><small>Admin</small></a>{trash}
 </div></header>
 <main class="page">{flash}{body}</main>
-{LIVE_SEARCH_JS}
+{LIVE_SEARCH_JS}{FLASH_JS if msg else ""}
 </body></html>"""
 
+
+FLASH_JS = """<script>
+/* The notice shows for 2 seconds, then fades away. The ?msg= part is removed from the address
+   so reloading the page does not show it again. */
+(function () {
+  var f = document.getElementById('flash');
+  if (!f) return;
+  try {
+    var u = new URL(location.href);
+    if (u.searchParams.has('msg')) { u.searchParams.delete('msg'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+  } catch (e) {}
+  setTimeout(function () { f.classList.add('gone'); setTimeout(function () { f.remove(); }, 350); }, 2000);
+})();
+</script>"""
 
 LIVE_SEARCH_JS = """<script>
 /* Search boxes marked data-live update the results as you type, no button needed */
@@ -264,12 +294,19 @@ def products_page(products: list, msg: str | None = None) -> str:
         thumb = f'<img src="{escape(img)}" alt="" loading="lazy">' if img else ""
         sub = f" · {escape(p['subcategory'].replace('-', ' ').title())}" if p.get("subcategory") else ""
         stock = '<span class="badge ok">In stock</span>' if p.get("in_stock") else '<span class="badge">Out of stock</span>'
-        rows.append(f"""<div class="row"><div class="thumb">{thumb}</div>
+        visible = p.get("is_visible", True) is not False
+        switch = (f'<form method="post" action="/admin/products/{p["id"]}/visibility" class="swf">'
+                  f'<input type="hidden" name="visible" value="{"" if visible else "1"}">'
+                  f'<button class="sw{" on" if visible else ""}" type="submit" role="switch" aria-checked="{"true" if visible else "false"}" '
+                  f'title="{"Shown on the website. Tap to hide it." if visible else "Hidden from the website. Tap to show it."}">'
+                  f'<span class="sw-knob"></span></button>'
+                  f'<span class="sw-l">{"On website" if visible else "Hidden"}</span></form>')
+        rows.append(f"""<div class="row{"" if visible else " is-hidden"}"><div class="thumb">{thumb}</div>
 <div class="grow"><p class="t">{escape(p['name'])}</p>
 <p class="s">{escape(p['category'].replace('-', ' ').title())}{sub} · {_money(p['price'])}</p></div>{stock}
 <div class="acts"><a class="btn sm ghost" href="/admin/products/{p['id']}">Edit</a>
-<form method="post" action="/admin/products/{p['id']}/delete" onsubmit="return confirm('Move this product to Recently Deleted?')">
-<button class="link">Delete</button></form></div></div>""")
+<form method="post" action="/admin/products/{p['id']}/delete" onsubmit="return confirm('Move this product to Recently Deleted? It will also disappear from the website.')">
+<button class="link">Delete</button></form></div>{switch}</div>""")
     listing = "".join(rows) or '<div class="empty">No products yet.</div>'
     body = f"""<div class="head"><div><h1>Products</h1><p class="sub">{len(products)} on the site</p></div>
 <a class="btn" href="/admin/products/new">+ Add product</a></div>{listing}"""
@@ -283,10 +320,14 @@ def _color_rows(v: dict) -> list[dict]:
     seen = {n.lower() for n in names}
     names += [c for c in photos if c.lower() not in seen]
     by_name = {c.lower(): urls for c, urls in photos.items()}
+    sc = v.get("sold_out_colors") or []
+    if isinstance(sc, str):
+        sc = [x.strip() for x in sc.split(",") if x.strip()]
+    sold = {c.lower() for c in sc}
     rows = []
     for n in names:
         urls = list(by_name.get(n.lower(), []))
-        rows.append({"name": n, "urls": urls + [""] * max(0, 2 - len(urls))})
+        rows.append({"name": n, "urls": urls + [""] * max(0, 2 - len(urls)), "out": n.lower() in sold})
     return rows
 
 
@@ -298,6 +339,7 @@ COLOR_EDITOR_JS = r"""<script>
   var form = list.closest('form');
   var colorsField = document.getElementById('cl-colors');
   var photosField = document.getElementById('cl-photos');
+  var soldField = document.getElementById('cl-sold');
   var addBtn = document.getElementById('cl-add');
   var priceInput = form.querySelector('input[name=price]');
   var LABELS = ['Front', 'Back'];
@@ -328,17 +370,81 @@ COLOR_EDITOR_JS = r"""<script>
     if (text) e.textContent = text;
     return e;
   }
+
+  /* ---- adding photos from the gallery: they are uploaded into the storage bucket ---- */
+  /* tell the server a photo was removed, so its file can be deleted from the bucket */
+  function discard(url) {
+    if (!url) return;
+    var fd = new FormData();
+    fd.append('url', url);
+    fetch('/admin/upload/delete', {method: 'POST', body: fd, credentials: 'same-origin'}).catch(function () {});
+  }
+  function folder() {
+    var s = form.querySelector('input[name=slug]');
+    var n = form.querySelector('input[name=name]');
+    var v = (s && s.value) || list.dataset.slug || (n && n.value) || 'uploads';
+    return v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'uploads';
+  }
+  /* phone photos are big: shrink large ones first so the upload always fits */
+  function shrink(file) {
+    return new Promise(function (resolve) {
+      if (file.size <= 3500000 || !/^image\/(png|jpeg|webp)$/.test(file.type)) return resolve(file);
+      var img = new Image(), u = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.min(1, 1800 / Math.max(img.width, img.height));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(u);
+        c.toBlob(function (b) { resolve(b || file); }, file.type, 0.88);
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); resolve(file); };
+      img.src = u;
+    });
+  }
+  function uploadFile(file) {
+    return shrink(file).then(function (blob) {
+      var fd = new FormData();
+      fd.append('file', blob, file.name || 'photo.jpg');
+      fd.append('folder', folder());
+      return fetch('/admin/upload', {method: 'POST', body: fd, credentials: 'same-origin'});
+    }).then(function (r) {
+      return r.json().catch(function () { return {error: 'Upload failed (the image may be too large).'}; });
+    }).then(function (j) {
+      if (!j.url) throw new Error(j.error || 'Upload failed.');
+      return j.url;
+    });
+  }
+  function addFiles(row, fileList) {
+    var queue = Array.prototype.slice.call(fileList);
+    row.pending = (row.pending || 0) + queue.length;
+    render();
+    queue.reduce(function (chain, f) {
+      return chain.then(function () {
+        return uploadFile(f).then(function (url) {
+          row.urls.push(url);
+        }).catch(function (e) {
+          alert((e && e.message) || 'Upload failed. Check your connection and try again.');
+        }).then(function () {
+          row.pending--; render(); sync();
+        });
+      });
+    }, Promise.resolve());
+  }
+
   function sync() {
-    var names = [], lines = [];
+    var names = [], lines = [], sold = [];
     rows.forEach(function (row) {
       var n = clean(row.name);
       if (!n) return;
       names.push(n);
+      if (row.out) sold.push(n);
       var urls = row.urls.map(function (u) { return u.trim(); }).filter(Boolean);
       if (urls.length) lines.push(n + ' = ' + urls.join(' | '));
     });
     colorsField.value = names.join(', ');
     photosField.value = lines.join('\n');
+    if (soldField) soldField.value = sold.join(', ');
   }
   function render() {
     list.innerHTML = '';
@@ -356,8 +462,14 @@ COLOR_EDITOR_JS = r"""<script>
       var price = el('span', 'cl-price', priceText());
       price.setAttribute('data-price', '1');
       var rm = el('button', 'link', 'remove'); rm.type = 'button';
-      rm.addEventListener('click', function () { rows.splice(ri, 1); render(); sync(); });
+      rm.addEventListener('click', function () { var gone = rows.splice(ri, 1)[0]; render(); sync(); gone.urls.forEach(discard); });
       top.appendChild(name); top.appendChild(price); top.appendChild(rm);
+
+      var oos = el('label', 'cl-oos');
+      var oosBox = document.createElement('input'); oosBox.type = 'checkbox'; oosBox.checked = !!row.out;
+      oosBox.addEventListener('change', function () { row.out = oosBox.checked; card.classList.toggle('sold', row.out); sync(); });
+      oos.appendChild(oosBox); oos.appendChild(document.createTextNode(' Out of stock (this color only)'));
+      card.classList.toggle('sold', !!row.out);
 
       row.urls = row.urls.filter(function (u) { return u.trim(); });
       var pics = el('div', 'cl-pics');
@@ -368,14 +480,24 @@ COLOR_EDITOR_JS = r"""<script>
         var lab = el('span', 'cl-pl', LABELS[ui] || 'Photo ' + (ui + 1));
         var x = el('button', 'cl-px', '×'); x.type = 'button';
         x.setAttribute('aria-label', 'Remove photo');
-        x.addEventListener('click', function () { row.urls.splice(ui, 1); render(); sync(); });
+        x.addEventListener('click', function () { var gone = row.urls.splice(ui, 1)[0]; render(); sync(); discard(gone); });
         tile.appendChild(img); tile.appendChild(lab); tile.appendChild(x);
         pics.appendChild(tile);
       });
-      var addTile = el('button', 'cl-pic cl-padd', '+'); addTile.type = 'button';
-      addTile.setAttribute('aria-label', 'Add photo');
-      pics.appendChild(addTile);
+      for (var p = 0; p < (row.pending || 0); p++) pics.appendChild(el('div', 'cl-pic cl-wait', 'Uploading...'));
 
+      /* the + tile opens the phone's gallery (several photos can be picked at once) */
+      var pick = document.createElement('input');
+      pick.type = 'file'; pick.accept = 'image/*'; pick.multiple = true; pick.style.display = 'none';
+      var addTile = el('button', 'cl-pic cl-padd', '+'); addTile.type = 'button';
+      addTile.setAttribute('aria-label', 'Add photos from your gallery');
+      addTile.addEventListener('click', function () { pick.click(); });
+      pick.addEventListener('change', function () {
+        if (pick.files && pick.files.length) addFiles(row, pick.files);
+      });
+      pics.appendChild(pick); pics.appendChild(addTile);
+
+      /* pasting a link still works, tucked under the photos */
       var linkBox = el('div', 'cl-link'); linkBox.hidden = true;
       var linkIn = document.createElement('input');
       linkIn.type = 'text'; linkIn.placeholder = 'Paste the photo link';
@@ -388,9 +510,11 @@ COLOR_EDITOR_JS = r"""<script>
       linkOk.addEventListener('click', commit);
       linkIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
       linkBox.appendChild(linkIn); linkBox.appendChild(linkOk);
-      addTile.addEventListener('click', function () { linkBox.hidden = !linkBox.hidden; if (!linkBox.hidden) linkIn.focus(); });
-
-      main.appendChild(num); main.appendChild(top); main.appendChild(pics); main.appendChild(linkBox);
+      var linkToggle = el('button', 'link', 'or paste a link'); linkToggle.type = 'button';
+      linkToggle.style.justifySelf = 'start'; linkToggle.style.paddingLeft = '0';
+      linkToggle.addEventListener('click', function () { linkBox.hidden = !linkBox.hidden; if (!linkBox.hidden) linkIn.focus(); });
+      main.appendChild(num); main.appendChild(top); main.appendChild(oos); main.appendChild(pics);
+      main.appendChild(linkToggle); main.appendChild(linkBox);
       card.appendChild(thumb); card.appendChild(main);
       list.appendChild(card);
     });
@@ -407,7 +531,14 @@ COLOR_EDITOR_JS = r"""<script>
     var t = priceText();
     list.querySelectorAll('[data-price]').forEach(function (s) { s.textContent = t; });
   });
-  form.addEventListener('submit', sync);
+  form.addEventListener('submit', function (e) {
+    if (rows.some(function (r) { return r.pending > 0; })) {
+      e.preventDefault();
+      alert('Photos are still uploading. Wait a moment, then save.');
+      return;
+    }
+    sync();
+  });
   render(); sync();
 })();
 </script>"""
@@ -484,6 +615,33 @@ SIZE_JS = r"""<script>
 </script>"""
 
 
+SUBCAT_JS = r"""<script>
+/* Block saving when the chosen category has sub-categories but none is picked */
+(function () {
+  var form = document.getElementById('product-form');
+  if (!form) return;
+  var subs = {};
+  try { subs = JSON.parse(form.dataset.subs || '{}'); } catch (e) {}
+  var cat = form.querySelector('select[name=category]');
+  var sub = form.querySelector('select[name=subcategory]');
+  var box = document.getElementById('sub-err');
+  function pretty(s) { return s.replace(/-/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); }); }
+  function hide() { if (box) box.hidden = true; sub.style.borderColor = ''; }
+  cat.addEventListener('change', hide);
+  sub.addEventListener('change', hide);
+  form.addEventListener('submit', function (e) {
+    if ((subs[cat.value] || []).length && !sub.value) {
+      e.preventDefault();
+      box.querySelector('strong').textContent = 'Choose a sub-category for ' + pretty(cat.value) + ' first.';
+      box.hidden = false;
+      sub.style.borderColor = 'var(--gold)';
+      box.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+  });
+})();
+</script>"""
+
+
 def product_form_page(v: dict, categories: list, subcategories: dict, error: str | None = None,
                       product_id: str | None = None, msg: str | None = None) -> str:
     def opt(val, label, current):
@@ -506,7 +664,8 @@ def product_form_page(v: dict, categories: list, subcategories: dict, error: str
     body = f"""<div class="head"><div><h1>{"Edit product" if editing else "New product"}</h1>
 <p class="sub"><a href="/admin/products" class="link" style="padding:0">&larr; Back to products</a></p></div></div>
 {err}
-<form method="post" action="{action}">
+<div class="err" id="sub-err" hidden><strong></strong></div>
+<form method="post" action="{action}" id="product-form" data-subs="{escape(json.dumps({k: v for k, v in subcategories.items() if v}))}">
 <div class="card">
 <div class="fg"><label class="f">Name</label><input type="text" name="name" value="{escape(v.get('name', ''))}" required></div>
 <div class="fg"><label class="f">Slug</label>{slug_field}</div>
@@ -528,16 +687,17 @@ def product_form_page(v: dict, categories: list, subcategories: dict, error: str
 <div class="fg"><label class="f">Main photo URL</label><input type="text" name="image_url" value="{escape(v.get('image_url', ''))}">
 <p class="hint">Used for social sharing and as the fallback. If you leave it empty, the first color photo is used.</p></div>
 <div class="fg" style="margin-bottom:0"><label class="f">Colors &amp; photos</label>
-<div id="cl-list" data-rows="{rows_json}"></div>
+<div id="cl-list" data-rows="{rows_json}" data-slug="{escape(v.get('slug', ''))}"></div>
 <button type="button" class="btn sm ghost" id="cl-add">+ Add color</button>
 <input type="hidden" name="colors" id="cl-colors" value="{escape(v.get('colors', ''))}">
+<input type="hidden" name="sold_out_colors" id="cl-sold" value="">
 <textarea name="photos" id="cl-photos" style="display:none">{escape(v.get('photos', ''))}</textarea>
-<p class="hint">One card per color. Photos show as Front, Back, then Photo 3 and so on. Tap × to remove one, or + to add another by pasting its link.
+<p class="hint">One card per color. Photos show as Front, Back, then Photo 3 and so on. Tap + to add photos from your gallery (you can pick several at once), or paste a link. Tap × to remove one.
 The price on each color is the product price above.</p></div>
 </div>
 <button class="btn" style="width:100%">{"Save changes" if editing else "Add product"}</button>
 </form>
-{SIZE_JS}{COLOR_EDITOR_JS}"""
+{SIZE_JS}{COLOR_EDITOR_JS}{SUBCAT_JS}"""
     return admin_page("Edit product" if editing else "New product", body, "products", msg)
 
 

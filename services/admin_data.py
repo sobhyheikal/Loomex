@@ -5,14 +5,17 @@ Soft delete: products, orders and promotions get a `deleted_at` timestamp
 instead of being removed. They vanish from the site and the admin lists, show
 up in Recently Deleted, and are removed for good after RETENTION_DAYS.
 """
-
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import unquote
 
 from config import CATEGORIES, SUBCATEGORIES
 from services import promotions as promo_svc
 from supabase_client import supabase
-
+BUCKET = "product_images"
+IMAGE_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}
+MAX_UPLOAD = 8 * 1024 * 1024
 try:
     from zoneinfo import ZoneInfo
     ADMIN_TZ = ZoneInfo("Africa/Cairo")
@@ -51,12 +54,79 @@ def get_product(pid: str) -> dict | None:
     return rows[0] if rows else None
 
 
+def set_visible(pid: str, visible: bool):
+    """Switch a product ON (shown on the website) or OFF (hidden there, kept in the admin)."""
+    supabase.table("products").update({"is_visible": bool(visible)}).eq("id", pid).execute()
+
+
 def insert_product(row: dict):
     supabase.table("products").insert(row).execute()
 
 
 def update_product(pid: str, row: dict):
+    old = (supabase.table("products").select("image_url,color_images").eq("id", pid)
+           .limit(1).execute().data or [None])[0]
     supabase.table("products").update(row).eq("id", pid).execute()
+    try:
+        delete_unused_photos(old, row, pid)
+    except Exception:
+        pass  # a failed clean-up must never stop the product from saving
+
+
+PUBLIC_MARK = f"/storage/v1/object/public/{BUCKET}/"
+
+
+def _bucket_path(url: str) -> str | None:
+    """The file path inside the bucket for one of our own photo links, otherwise None."""
+    mark = f"/storage/v1/object/public/{BUCKET}/"
+    if mark not in (url or ""):
+        return None
+    return unquote(url.split(mark, 1)[1].split("?", 1)[0]) or None
+    """The file path inside the bucket for one of our own photo links, otherwise None."""
+    if PUBLIC_MARK not in (url or ""):
+        return None
+    return unquote(url.split(PUBLIC_MARK, 1)[1].split("?", 1)[0]) or None
+
+
+def _photo_urls(p: dict | None) -> set[str]:
+    urls = set()
+    if not p:
+        return urls
+    if p.get("image_url"):
+        urls.add(p["image_url"])
+    for v in (p.get("color_images") or {}).values():
+        urls.update([v] if isinstance(v, str) else (v or []))
+    return {u for u in urls if u}
+
+
+def _all_photo_urls(skip_id: str | None = None) -> set[str]:
+    """Every photo link any product uses, deleted ones too (they can still be restored)."""
+    urls = set()
+    for p in supabase.table("products").select("id,image_url,color_images").execute().data or []:
+        if skip_id and str(p["id"]) == str(skip_id):
+            continue
+        urls |= _photo_urls(p)
+    return urls
+
+
+def _remove_files(urls):
+    paths = [x for x in (_bucket_path(u) for u in urls) if x]
+    if paths:
+        supabase.storage.from_(BUCKET).remove(paths)
+
+
+def delete_unused_photos(old: dict | None, new_row: dict, pid: str):
+    """After a product is saved: delete the photos it no longer uses from the bucket,
+    unless another product still uses the same file."""
+    gone = _photo_urls(old) - _photo_urls(new_row)
+    if gone:
+        _remove_files(gone - _all_photo_urls(skip_id=pid))
+
+
+def delete_photo_if_unused(url: str):
+    """Used when you tap x on a photo: delete the file only if no product uses it."""
+    if url and url not in _all_photo_urls():
+        _remove_files([url])
 
 
 def _split(text: str) -> list[str]:
@@ -91,7 +161,7 @@ def slugify(name: str) -> str:
 def blank_product_form() -> dict:
     return {"name": "", "slug": "", "description": "", "category": CATEGORIES[0],
             "subcategory": "", "price": "", "sizes": "S, M, L, XL", "colors": "",
-            "image_url": "", "photos": "", "in_stock": True, "sold_out": []}
+            "image_url": "", "photos": "", "in_stock": True, "sold_out": [], "sold_out_colors": []}
 
 
 def product_to_form(p: dict) -> dict:
@@ -105,6 +175,7 @@ def product_to_form(p: dict) -> dict:
         "photos": photos_to_text(p.get("color_images")),
         "in_stock": bool(p.get("in_stock", True)),
         "sold_out": list(p.get("sold_out_sizes") or []),
+        "sold_out_colors": list(p.get("sold_out_colors") or []),
     }
 
 
@@ -123,6 +194,8 @@ def build_product_row(form: dict, creating: bool) -> tuple[dict | None, str | No
     if category not in CATEGORIES:
         return None, "Pick a category."
     sub = form["subcategory"] or None
+    if not sub and SUBCATEGORIES.get(category):
+        return None, f"Choose a sub-category for {category.replace('-', ' ').title()} first."
     if sub and sub not in SUBCATEGORIES.get(category, []):
         return None, f"'{sub}' isn't a sub-category of {category}."
     sizes = _split(form["sizes"])
@@ -143,12 +216,18 @@ def build_product_row(form: dict, creating: bool) -> tuple[dict | None, str | No
     if not image_url and photos:
         image_url = next(iter(photos.values()))[0]
 
+    sc = form.get("sold_out_colors") or []
+    if isinstance(sc, str):
+        sc = _split(sc)
+    sold_colors = {c.strip().lower() for c in sc}
+
     row = {
         "name": name, "description": form["description"].strip() or None,
         "category": category, "subcategory": sub, "price": price, "sizes": sizes,
         "colors": colors, "image_url": image_url or None, "color_images": photos,
         "in_stock": bool(form["in_stock"]),
         "sold_out_sizes": [s for s in sizes if s in form.get("sold_out", [])],
+        "sold_out_colors": [c for c in colors if c.lower() in sold_colors],
     }
     if creating:
         slug = slugify(form["slug"] or name)
@@ -163,7 +242,28 @@ def friendly_db_error(e: Exception) -> str:
     if "duplicate key" in s and "slug" in s:
         return "That slug is already used. It may belong to a product in Recently Deleted."
     return "Couldn't save: " + s[:160]
+BUCKET = "product_images"
+IMAGE_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}
+MAX_UPLOAD = 8 * 1024 * 1024
 
+
+def upload_image(folder: str, filename: str, content: bytes, content_type: str) -> str:
+    """Put a photo in the storage bucket and return its public link."""
+    ext = IMAGE_TYPES.get((content_type or "").lower())
+    if not ext:
+        raise ValueError("Choose a PNG, JPG, WEBP or GIF image.")
+    if not content:
+        raise ValueError("That file is empty.")
+    if len(content) > MAX_UPLOAD:
+        raise ValueError("That image is too big (8 MB max).")
+    stem = slugify(filename.rsplit(".", 1)[0]) or "photo"
+    folder = slugify(folder) or "uploads"
+    path = f"{folder}/{stem}-{secrets.token_hex(3)}.{ext}"
+    supabase.storage.from_(BUCKET).upload(path, content, {"content-type": content_type, "upsert": "false"})
+    url = supabase.storage.from_(BUCKET).get_public_url(path)
+    if isinstance(url, dict):
+        url = url.get("publicURL") or url.get("publicUrl") or ""
+    return str(url).rstrip("?")
 
 # --------------------------------------------------------------- orders ----
 def list_orders(q: str | None = None, limit: int = 100) -> list[dict]:
@@ -180,11 +280,8 @@ def update_order_status(oid: str, status: str, payment_status: str = ""):
     if payment_status:  # cancelled orders send only a status
         row["payment_status"] = payment_status[:40]
     supabase.table("orders").update(row).eq("id", oid).execute()
-    supabase.table("orders").update(
-        {"status": status[:40], "payment_status": payment_status[:40]}
-    ).eq("id", oid).execute()
-    ORDER_VIEWS = [("active", "Active"), ("cancelled", "Cancelled"),
-               ("completed", "Completed"), ("history", "History")]
+
+
 ORDER_VIEWS = [("active", "Active"), ("cancelled", "Cancelled"),
                ("completed", "Completed"), ("history", "History")]
 

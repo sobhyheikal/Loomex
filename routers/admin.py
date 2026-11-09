@@ -4,9 +4,9 @@ import time
 from urllib.parse import urlencode
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import templates_admin as ui
 from config import CATEGORIES, SUBCATEGORIES
@@ -72,34 +72,6 @@ def profile(msg: str | None = None):
 
 
 @router.post("/profile")
-def profile_save(request: Request, current_password: str = Form(""), email: str = Form(""),
-                 new_password: str = Form(""), confirm_password: str = Form("")):
-    acct = admin_auth.get_account()
-    current_email = acct["email"] if acct else ""
-
-    def fail(error):
-        return HTMLResponse(ui.profile_page(current_email, error=error, form_email=email), status_code=400)
-
-    if not admin_auth.verify_current(current_password, acct):
-        time.sleep(1)
-        return fail("Your current password is wrong.")
-    email = (email or "").strip().lower() or current_email
-    if not admin_auth.valid_email(email):
-        return fail("Enter a valid email address.")
-    if new_password or confirm_password:
-        if len(new_password) < admin_auth.MIN_PASSWORD:
-            return fail(f"The new password must be at least {admin_auth.MIN_PASSWORD} characters.")
-        if new_password != confirm_password:
-            return fail("The two new passwords don't match.")
-    # no new password -> keep the current one (stored hashed from now on)
-    pw_hash = admin_auth.hash_password(new_password or current_password)
-    admin_auth.save_account(email, pw_hash)
-    resp = _go("/admin/profile", "profile")
-    admin_auth.set_login_cookie(resp, request, admin_auth.get_account())  # keep this device signed in
-    return resp
-
-
-@router.post("/profile")
 def profile_save(request: Request, current_password: str = Form(""),
                  new_password: str = Form(""), confirm_password: str = Form("")):
     acct = admin_auth.get_account()
@@ -120,16 +92,17 @@ def profile_save(request: Request, current_password: str = Form(""),
     admin_auth.set_login_cookie(resp, request, admin_auth.get_account())  # keep this device signed in
     return resp
 
+
 # ------------------------------------------------------------- products ----
 def _product_form(name: str = Form(""), slug: str = Form(""), description: str = Form(""),
                   category: str = Form(""), subcategory: str = Form(""), price: str = Form(""),
                   sizes: str = Form(""), colors: str = Form(""), image_url: str = Form(""),
                   photos: str = Form(""), in_stock: str = Form(""),
-                  sold_out: list[str] = Form([])) -> dict:
+                  sold_out: list[str] = Form([]), sold_out_colors: str = Form("")) -> dict:
     return {"name": name, "slug": slug, "description": description, "category": category,
             "subcategory": subcategory, "price": price, "sizes": sizes, "colors": colors,
             "image_url": image_url, "photos": photos, "in_stock": bool(in_stock),
-            "sold_out": sold_out}
+            "sold_out": sold_out, "sold_out_colors": sold_out_colors}
 
 
 @router.get("/products", response_class=HTMLResponse)
@@ -181,10 +154,37 @@ def product_save(pid: UUID, form: dict = Depends(_product_form)):
     return _go(f"/admin/products/{pid}", "saved")
 
 
+@router.post("/products/{pid}/visibility")
+def product_visibility(pid: UUID, visible: str = Form("")):
+    data.set_visible(str(pid), visible == "1")
+    return _go("/admin/products", "updated")
+
+
 @router.post("/products/{pid}/delete")
 def product_delete(pid: UUID):
     data.soft_delete("products", str(pid))
     return _go("/admin/products", "deleted")
+
+
+# ---------------------------------------------------------- photo upload ----
+@router.post("/upload")
+def upload(file: UploadFile = File(...), folder: str = Form("uploads")):
+    try:
+        url = data.upload_image(folder, file.filename or "photo", file.file.read(), file.content_type or "")
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": "Upload failed: " + str(e)[:160]}, status_code=500)
+    return {"url": url}
+
+
+@router.post("/upload/delete")
+def upload_delete(url: str = Form("")):
+    try:
+        data.delete_photo_if_unused(url)
+    except Exception:
+        pass
+    return {"ok": True}
 
 
 # --------------------------------------------------------------- orders ----
@@ -215,38 +215,7 @@ def customers(q: str | None = None):
     return ui.customers_page(data.list_customers(q), q or "")
 
 
-# ----------------------------------------------------------- promotions ----
-@router.get("/promotions", response_class=HTMLResponse)
-def promotions(msg: str | None = None):
-    return ui.promotions_page(data.list_promotions(), msg=MSGS.get(msg or ""))
 
-
-@router.post("/promotions/new")
-def promotion_create(message: str = Form(""), link_text: str = Form(""), link_url: str = Form(""),
-                     starts: str = Form(""), ends: str = Form("")):
-    row, error = data.build_promotion_row(message, link_text, link_url, starts, ends)
-    if not error:
-        try:
-            data.add_promotion(row)
-        except Exception as e:
-            error = data.friendly_db_error(e)
-    if error:
-        form = {"message": message, "link_text": link_text, "link_url": link_url,
-                "starts": starts, "ends": ends}
-        return HTMLResponse(ui.promotions_page(data.list_promotions(), error=error, form=form), status_code=400)
-    return _go("/admin/promotions", "created")
-
-
-@router.post("/promotions/{pid}/toggle")
-def promotion_toggle(pid: UUID):
-    data.toggle_promotion(str(pid))
-    return _go("/admin/promotions", "updated")
-
-
-@router.post("/promotions/{pid}/delete")
-def promotion_delete(pid: UUID):
-    data.soft_delete("promotions", str(pid))
-    return _go("/admin/promotions", "deleted")
 
 
 # ------------------------------------------------------ recently deleted ----
@@ -269,3 +238,5 @@ def deleted_restore(kind: str, rid: UUID):
 def deleted_purge(kind: str, rid: UUID):
     data.purge(_kind(kind), str(rid))
     return _go("/admin/deleted", "purged")
+from routers import admin_promotions  # noqa: E402
+router.include_router(admin_promotions.router)

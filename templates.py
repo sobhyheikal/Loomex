@@ -1033,6 +1033,7 @@ def shop_page(products: list, categories: list, active_category: str | None, car
             color_images = p.get("color_images") or {}
             colors = p.get("colors") or []
             fallback_img = p.get("image_url") or ""
+            card_sold = {str(x).strip().lower() for x in (p.get("sold_out_colors") or [])}
 
             if color_images:
                 groups = []
@@ -1059,7 +1060,8 @@ def shop_page(products: list, categories: list, active_category: str | None, car
                         f'<div class="card-group{" active" if ci == 0 else ""}" data-ci="{ci}">{imgs}{arrows}</div>'
                     )
                     swatches.append(
-                        f'<button type="button" class="swatch{" active" if ci == 0 else ""}" '
+                                                f'<button type="button" class="swatch{" active" if ci == 0 else ""}'
+                        f'{" soldout" if c.lower() in card_sold else ""}" '
                         f"style=\"background-image:url('{escape(urls[0])}')\" "
                         f'onclick="event.preventDefault();event.stopPropagation();cardShowColor(this,{ci});" '
                         f'aria-label="{escape(c)}" title="{escape(c)}"></button>'
@@ -1073,17 +1075,21 @@ def shop_page(products: list, categories: list, active_category: str | None, car
                 )
                 swatch_row = ""
 
+            gone = _fully_sold_out(p)
+            if gone:
+                media = media.replace('<div class="card-media">', '<div class="card-media"><span class="card-ribbon">Sold out</span>', 1)
             card_blocks.append(
-                f"""<a href="/product/{escape(p['slug'])}" class="card">
+                f"""<a href="/product/{escape(p['slug'])}" class="card{' is-sold' if gone else ''}">
                       {media}
                       <div class="card-body">
                         <p class="card-name">{escape(p['name'])}</p>
                         <p class="card-price">{p['price']:.0f} EGP</p>
                         {swatch_row}
+                        {'<span class="card-soldbtn">Sold out</span>' if gone else ''}
                       </div>
                     </a>"""
             )
-        grid = f'<div class="grid">{"".join(card_blocks)}</div>'
+        grid = f'{SOLD_CSS}<div class="grid">{"".join(card_blocks)}</div>'
     elif search:
         grid = f'<div class="empty">No products match "{escape(search)}".</div>'
     else:
@@ -1158,34 +1164,74 @@ function pgStep(ci, delta){
 """
 SOLD_OUT_CSS = """
 <style>
-.pill-out { opacity: .4; text-decoration: line-through; cursor: not-allowed; }
-.pill-out input { cursor: not-allowed; }
-.btn-soldout { background: transparent; color: var(--paper-dim); border: 1px solid var(--line); cursor: not-allowed; }
-.pd-soldout-tag { display: inline-block; margin: 0 0 12px; padding: 4px 10px; border: 1px solid #e5806b;
-  color: #e5806b; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.pill-out{position:relative;overflow:hidden;opacity:.5;color:var(--paper-dim);cursor:not-allowed;}
+.pill-out input{cursor:not-allowed;}
+.pill-out::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to top right,transparent calc(50% - 1px),var(--gold,#c79a46) calc(50% - 1px),var(--gold,#c79a46) calc(50% + 1px),transparent calc(50% + 1px));}
+.pill-out.viewing{opacity:.85;border-color:var(--gold,#c79a46);color:var(--gold,#c79a46);}
+.btn-soldout{background:transparent;color:var(--paper-dim);border:1px solid var(--line);cursor:not-allowed;}
+.so-box{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:0 0 16px;}
+.so-badge{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:8px 16px;border:1px solid rgba(224,88,74,.75);
+  border-radius:999px;background:rgba(224,88,74,.12);font:600 11.5px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#f0aaa1;}
+.so-badge .so-dot{width:8px;height:8px;border-radius:50%;background:#e0584a;flex:0 0 auto;}
+.so-badge .so-what{color:#fff;letter-spacing:.06em;text-transform:none;font-weight:500;}
 </style>
 """
+def _fully_sold_out(p: dict) -> bool:
+    """True when nothing can be bought: product off, every size sold out, or every color sold out."""
+    if not p.get("in_stock", True):
+        return True
+    sizes = p.get("sizes") or []
+    sold_s = {str(x).strip().lower() for x in (p.get("sold_out_sizes") or [])}
+    if sizes and all(x.lower() in sold_s for x in sizes):
+        return True
+    colors = p.get("colors") or []
+    sold_c = {str(x).strip().lower() for x in (p.get("sold_out_colors") or [])}
+    return bool(colors) and all(x.lower() in sold_c for x in colors)
+
+
+SOLD_CSS = ("<style>"
+            ".card.is-sold .card-media{position:relative;}"
+            ".card.is-sold .card-media img{opacity:.45;filter:grayscale(.4);}"
+            ".card-ribbon{position:absolute;left:8px;top:8px;z-index:3;padding:5px 12px;border-radius:999px;"
+            "background:var(--gold,#c79a46);color:#201c18;font:700 10.5px Inter,sans-serif;letter-spacing:.12em;"
+            "text-transform:uppercase;pointer-events:none;}"
+            ".card-soldbtn{display:block;margin-top:10px;padding:9px 0;text-align:center;border:1px solid var(--gold,#c79a46);"
+            "color:var(--gold,#c79a46);font:600 11.5px Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;}"
+            ".pd-soldtag{display:inline-block;margin:0 0 14px;padding:6px 16px;border:1px solid var(--gold,#c79a46);"
+            "border-radius:999px;color:var(--gold,#c79a46);font:700 11.5px Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;}"
+            ".swatch.soldout{opacity:.35;position:relative;}"
+            ".swatch.soldout::after{content:'';position:absolute;left:-2px;right:-2px;top:50%;"
+            "border-top:2px solid #c0392b;transform:rotate(-45deg);}</style>")
+
+
 def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: dict | None = None) -> str:
-    sold_out_sizes = set(p.get("sold_out_sizes") or [])
-    available_sizes = [s for s in p["sizes"] if s not in sold_out_sizes]
-    is_sold_out = (not p.get("in_stock", True)) or not available_sizes
-    first_ok = available_sizes[0] if available_sizes else None
+    sizes = p.get("sizes") or []
+    sold_out_sizes = {str(x).strip().lower() for x in (p.get("sold_out_sizes") or [])}
+    first_size = next((x for x in sizes if x.lower() not in sold_out_sizes), None)
     size_pills = "".join(
-        f'<label class="pill{" pill-out" if s in sold_out_sizes else ""}">'
-        f'<input type="radio" name="size" value="{escape(s)}"'
-        f'{" checked" if s == first_ok else ""}'
-               f'{" disabled" if s in sold_out_sizes else ""}>{escape(s)}</label>'
-        for s in p["sizes"]
+        (f'<label class="pill pill-out" title="Sold out"><input type="radio" name="size" value="{escape(x)}" disabled>'
+         f'{escape(x)}</label>')
+        if x.lower() in sold_out_sizes else
+        (f'<label class="pill"><input type="radio" name="size" value="{escape(x)}"'
+         f'{" checked" if x == first_size else ""}>{escape(x)}</label>')
+        for x in sizes
     )
-    add_btn = (
-        '<button class="btn btn-soldout" type="button" disabled>Sold out</button>'
-        if is_sold_out else '<button class="btn" type="submit">Add to Cart</button>'
-    )
-    soldout_tag = '<p class="pd-soldout-tag">Sold out</p>' if is_sold_out else ""
 
     # color_images format: {"Black": ["url1", "url2"], "Olive": ["url3"]}
     color_images = p.get("color_images") or {}
     colors = p.get("colors") or []
+    sold_colors = {str(c).strip().lower() for c in (p.get("sold_out_colors") or [])}
+    first_ok = next((i for i, c in enumerate(colors) if c.lower() not in sold_colors), None)
+    all_colors_sold = bool(colors) and first_ok is None
+    all_sizes_sold = bool(sizes) and first_size is None
+    is_sold_out = (not p.get("in_stock", True)) or all_sizes_sold or all_colors_sold
+    add_btn = (
+        '<button class="btn btn-soldout" type="button" disabled>Sold out</button>'
+        if is_sold_out else '<button class="btn" id="add-btn" data-live="1" type="submit">Add to Cart</button>'
+    )
+
+    soldout_tag = '<span class="pd-soldtag">Sold out</span>' if is_sold_out else ""
 
     if color_images:
         groups = []
@@ -1219,15 +1265,23 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
             )
         image_block = f'{GALLERY_CSS}<div class="pg">{"".join(groups)}</div>{GALLERY_JS}'
         color_pills = "".join(
-            f'<label class="pill"><input type="radio" name="color" value="{escape(c)}"'
-            f'{" checked" if i == 0 else ""} onchange="pgShowColor({i})">{escape(c)}</label>'
+            (f'<label class="pill pill-out" data-color="1" title="Sold out">'
+             f'<input type="radio" name="color" value="{escape(c)}" data-sold="1" onchange="pgShowColor({i})">{escape(c)}</label>')
+            if c.lower() in sold_colors else
+            (f'<label class="pill"><input type="radio" name="color" value="{escape(c)}"'
+             f'{" checked" if i == first_ok else ""} onchange="pgShowColor({i})">{escape(c)}</label>')
             for i, c in enumerate(colors)
         )
+        if first_ok not in (None, 0):
+            image_block += f"<script>pgShowColor({first_ok});</script>"
     else:
         image_block = f'<div class="pd-image"><img src="{escape(p.get("image_url") or "")}" alt="{escape(p["name"])}"></div>'
         color_pills = "".join(
-            f'<label class="pill"><input type="radio" name="color" value="{escape(c)}"'
-            f'{" checked" if i == 0 else ""}>{escape(c)}</label>'
+            (f'<label class="pill pill-out" data-color="1"><input type="radio" name="color" value="{escape(c)}" data-sold="1">'
+             f'{escape(c)}</label>')
+            if c.lower() in sold_colors else
+            (f'<label class="pill"><input type="radio" name="color" value="{escape(c)}"'
+             f'{" checked" if i == first_ok else ""}>{escape(c)}</label>')
             for i, c in enumerate(colors)
         )
 
@@ -1261,6 +1315,29 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
     {add_btn}
   </form>
+  <script>
+  (function(){{
+    var btn = document.getElementById('add-btn');
+    if (!btn || btn.dataset.live !== '1') return;
+    var form = btn.form, viewing = false;
+    function setSold(on){{
+      viewing = on;
+      btn.disabled = on;
+      btn.type = on ? 'button' : 'submit';
+      btn.classList.toggle('btn-soldout', on);
+      btn.textContent = on ? 'Sold out' : 'Add to Cart';
+    }}
+    form.addEventListener('submit', function(e){{ if (viewing) e.preventDefault(); }});
+    form.querySelectorAll('input[name=color]').forEach(function(r){{
+      r.addEventListener('change', function(){{
+        form.querySelectorAll('.pill-out.viewing').forEach(function(l){{ l.classList.remove('viewing'); }});
+        var sold = r.dataset.sold === '1';
+        if (sold) r.closest('label').classList.add('viewing');
+        setSold(sold);
+      }});
+    }});
+  }})();
+  </script>
 </div>
 </div>
 """
