@@ -279,30 +279,24 @@ def login_page(configured: bool = True, error: str | None = None, first_time: bo
 PUSH_CARD = """
 <div class="card" id="push-card">
 <h3 style="margin:0 0 6px;font:600 11px Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Order notifications</h3>
-<p class="hint" style="margin:0 0 14px">Get an alert on this device for every new order. On iPhone, open the admin from the home screen icon first (Share, then Add to Home Screen).</p>
+<p class="hint" style="margin:0 0 14px">Get an alert on this device for every new order.</p>
 <p class="s" id="push-status" style="margin:0 0 12px"></p>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
 <button type="button" class="btn" id="push-on">Enable notifications</button>
-<button type="button" class="btn ghost" id="push-test" hidden>Send test</button>
 <button type="button" class="btn ghost" id="push-off" hidden>Turn off</button>
 </div>
 </div>
 <script>
 (function () {
   var st = document.getElementById('push-status');
-  var on = document.getElementById('push-on'), test = document.getElementById('push-test'), off = document.getElementById('push-off');
+  var on = document.getElementById('push-on'), off = document.getElementById('push-off');
   if (!st) return;
   function say(t) { st.textContent = t; }
-  function ui(enabled) { on.hidden = enabled; test.hidden = !enabled; off.hidden = !enabled; }
+  function ui(enabled) { on.hidden = enabled; off.hidden = !enabled; }
   var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
   var ok = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
-  if (!ok) {
-    on.hidden = true;
-    say(ios && !standalone ? 'On iPhone, add this page to your Home Screen, open it from there, then come back here.'
-                           : 'This browser does not support notifications.');
-    return;
-  }
+  if (!ok) { var card = document.getElementById('push-card'); if (card) card.remove(); return; }
   function keyBytes(b64) {
     var pad = '='.repeat((4 - b64.length % 4) % 4);
     var raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
@@ -350,12 +344,6 @@ PUSH_CARD = """
     }).then(function () { return refresh(); }).catch(function (e) {
       say((e && e.message) || 'Something went wrong. Try again.');
     }).then(function () { on.disabled = false; });
-  });
-  test.addEventListener('click', function () {
-    test.disabled = true; say('Sending a test...');
-    post('/admin/push/test').then(function (r) { return r.json(); }).then(function (j) {
-      say(j.sent ? 'Test sent. It should arrive in a moment.' : 'Nothing was sent. Turn notifications off and on again.');
-    }).catch(function () { say('Could not send the test.'); }).then(function () { test.disabled = false; });
   });
   off.addEventListener('click', function () {
     navigator.serviceWorker.getRegistration('/admin/').then(function (reg) {
