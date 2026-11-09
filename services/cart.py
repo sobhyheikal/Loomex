@@ -81,6 +81,7 @@ def resolve_cart(cart: list[dict]):
         subtotal += line_total
         lines.append({
             "index": i,
+                      "product_id": p["id"],
             "slug": p["slug"],
             "name": p["name"],
             "price": float(p["price"]),
@@ -91,3 +92,14 @@ def resolve_cart(cart: list[dict]):
             "line_total": line_total,
         })
     return lines, subtotal
+
+
+def cart_pricing(lines: list[dict]) -> dict:
+    """Promotion discounts for these cart lines (see services/promotions.price_cart)."""
+    try:
+        from services.promotions import price_cart
+        return price_cart(lines)
+    except Exception:
+        subtotal = round(sum(float(l["line_total"]) for l in lines), 2)
+        return {"subtotal": subtotal, "discount": 0.0, "applied": [], "free_shipping": False,
+                "gifts": [], "code_ok": None, "note": ""}

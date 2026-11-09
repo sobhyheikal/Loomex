@@ -69,8 +69,16 @@
         '</div>' +
       '</div>';
     }).join('');
+    var disc = (data.applied || []).map(function (a) {
+      return '<div class="cd-subtotal cd-discount"><span>' + esc(a.title) + ' (' + esc(a.what) + ')</span><span>&minus;' + egp(a.amount) + '</span></div>';
+    }).join('');
+        var gift = (data.gifts && data.gifts.length)
+      ? '<div class="cd-gift" style="margin:10px 0;padding:10px 12px;border:1px dashed var(--gold);color:var(--gold);font-size:13px;line-height:1.5;text-align:center;">' +
+        '&#127873; <strong>Good news!</strong> You\'ll get a free gift with this order.</div>'
+      : '';
     foot.innerHTML =
-      '<div class="cd-subtotal"><span>Subtotal</span><span>' + egp(data.subtotal) + '</span></div>' +
+      '<div class="cd-subtotal"><span>Subtotal</span><span>' + egp(data.subtotal) + '</span></div>' + disc + gift +
+      (data.discount > 0 ? '<div class="cd-subtotal"><span>Total</span><span>' + egp(data.total) + '</span></div>' : '') +
       '<p class="cd-note">Shipping is calculated at checkout.</p>' +
       '<a href="/checkout" class="btn">Checkout</a>' +
       '<a href="/cart" class="cd-viewcart">View full cart</a>';

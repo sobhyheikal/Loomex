@@ -240,3 +240,5 @@ def deleted_purge(kind: str, rid: UUID):
     return _go("/admin/deleted", "purged")
 from routers import admin_promotions  # noqa: E402
 router.include_router(admin_promotions.router)
+from routers import admin_earnings  # noqa: E402
+router.include_router(admin_earnings.router)

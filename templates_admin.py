@@ -10,7 +10,7 @@ from services.promotions import _parse, promo_state
 from templates import FONTS
 
 NAV = [("orders", "Orders"), ("products", "Products"), ("customers", "Customers"),
-       ("promotions", "Promotions"), ("profile", "Profile")]
+       ("promotions", "Promotions"), ("earnings", "Earnings"), ("profile", "Profile")]
 
 ADMIN_CSS = """
 <style>

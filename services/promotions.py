@@ -6,11 +6,15 @@ pages don't hit Supabase on every view. The admin panel clears the cache when
 it changes something.
 
 Pricing rules (price_cart):
+  * Any number of promotions can be live at the same time. ALL that match the cart apply.
   * A promotion WITH a discount code only applies when the customer types that code.
   * A promotion WITHOUT a code applies automatically.
-  * Money discounts do not stack: the single biggest money discount wins.
-  * Free shipping and free gifts from any matching promotion still apply.
   * "Selected products" empty = the promotion covers every product.
+  * In deals like Buy 1 Get 1, the customer always pays for the MORE EXPENSIVE item;
+    the cheaper one is the free / discounted one.
+  * Promotions apply one after another on what is left to pay, so two promotions can
+    never take more than the price. Order: price cuts (% off, fixed off), then quantity
+    deals (BOGO, 2nd item, buy N, bundle), then % off over a minimum spend.
 """
 
 import time
@@ -28,21 +32,21 @@ DISCOUNT_TYPES = [
     ("fixed_off", "Fixed amount off", ("value",), (),
      "Takes a fixed amount (EGP) off every unit of the selected products."),
     ("bogo", "Buy 1 Get 1", (), (),
-     "Buy one, get one free. In each pair the cheaper item is free."),
+     "Buy one, get one free. In each pair the customer pays the more expensive item."),
     ("second_item_pct", "2nd item at X% off", ("value",), (),
      "Every second item gets the percentage off (the cheaper one in each pair)."),
     ("buy_n_get_1", "Buy N, get 1 free", ("min_qty",), (),
-     "Buy N items and the next one is free (the cheapest in each group)."),
+     "e.g. 2 for \"buy 2, get 1 free\". The cheapest item in each group is the free one."),
     ("buy_n_pct", "Buy N+, get % off", ("min_qty", "value"), (),
      "Buy at least N items and get a percentage off all of them."),
-    ("bundle_price", "Bundle price", ("min_qty", "value"), (),
+    ("bundle_price", "Bundle price", ("min_qty", "value"), ("same_product",),
      "N items together for one fixed price."),
     ("min_spend_pct", "% off over min. spend", ("min_spend", "value"), (),
      "A percentage off once the selected items add up to the minimum spend."),
-    ("free_gift", "Free gift", ("gift_text",), ("min_spend",),
-     "The customer gets a free gift. It is written on the order so you can pack it."),
-    ("free_shipping", "Free shipping", (), ("min_spend",),
-     "Shipping becomes free, optionally above a minimum spend."),
+    ("free_gift", "Free gift", ("min_spend",), (),
+     "Customers spending over the minimum see that a free gift is included with their order."),
+    ("free_shipping", "Free shipping", (), (),
+     "Shipping is free on orders that include the selected products."),
 ]
 TYPE_BY_KEY = {t[0]: t for t in DISCOUNT_TYPES}
 
@@ -55,6 +59,10 @@ VALUE_LABELS = {
     "bundle_price": "Bundle price (EGP)",
     "min_spend_pct": "Percent off (%)",
 }
+
+# order promotions are applied in (see the rules above)
+_GROUP = {"percent_off": 0, "fixed_off": 0, "bogo": 1, "second_item_pct": 1, "buy_n_get_1": 1,
+          "buy_n_pct": 1, "bundle_price": 1, "min_spend_pct": 2, "free_gift": 3, "free_shipping": 3}
 
 
 def clear_cache():
@@ -137,7 +145,6 @@ def _r(x: float) -> int:
 def describe(p: dict) -> str:
     """Short text for a promotion's discount, e.g. '50% off' or 'Buy 3, get 1 free'."""
     t, v, n, s = p.get("discount_type"), _num(p.get("value")), _int(p.get("min_qty")), _num(p.get("min_spend"))
-    over = f" over {s:g} EGP" if s else ""
     if t == "percent_off":
         return f"{v:g}% off"
     if t == "fixed_off":
@@ -151,13 +158,14 @@ def describe(p: dict) -> str:
     if t == "buy_n_pct":
         return f"Buy {n}+, get {v:g}% off"
     if t == "bundle_price":
-        return f"{n} for {v:g} EGP"
+        same = " (same product)" if p.get("bundle_same_product_only") else ""
+        return f"{n} for {v:g} EGP{same}"
     if t == "min_spend_pct":
         return f"{v:g}% off over {s:g} EGP"
     if t == "free_gift":
-        return f"Free gift: {p.get('gift_text') or 'gift'}{over}"
+        return f"Free gift over {s:g} EGP"
     if t == "free_shipping":
-        return f"Free shipping{over}"
+        return "Free shipping"
     return "Banner only"
 
 
@@ -166,41 +174,65 @@ def _ids(promo: dict) -> set[str]:
 
 
 # --------------------------------------------------------- cart pricing ----
-def _evaluate(promo: dict, lines: list[dict]) -> tuple[float, bool, str]:
-    """(money discount, free shipping?, gift text) one promotion gives this cart.
-    Each line needs: product_id, price (one unit), qty, line_total."""
+def _apply(promo: dict, units: list[dict]) -> tuple[float, bool, bool]:
+    """Apply one promotion to the cart's units (each: pid, orig, cur = what is left to pay).
+    Lowers `cur` on the units it discounts. Returns (money taken off, free shipping?, free gift?)."""
     ids = _ids(promo)
-    elig = [l for l in lines if not ids or str(l.get("product_id")) in ids]
+    elig = sorted((u for u in units if not ids or u["pid"] in ids), key=lambda u: (-u["orig"], -u["cur"]))  # dearest first (normal price decides, then what is left)
     if not elig:
-        return 0.0, False, ""
-    units = sorted((u for l in elig for u in [float(l["price"])] * int(l["qty"])), reverse=True)
-    es = sum(float(l["price"]) * int(l["qty"]) for l in elig)  # eligible subtotal
+        return 0.0, False, False
     t = promo.get("discount_type")
     v, n, s = _num(promo.get("value")), _int(promo.get("min_qty")), _num(promo.get("min_spend"))
-    amount, ship, gift = 0.0, False, ""
+    spend = sum(u["orig"] for u in elig)  # thresholds look at the normal prices
+    taken, ship, gift = 0.0, False, False
+
+    def cut(u, amount):
+        nonlocal taken
+        amount = max(0.0, min(amount, u["cur"]))
+        u["cur"] -= amount
+        taken += amount
 
     if t == "percent_off":
-        amount = sum(u - _r(u * (1 - v / 100)) for u in units)
+        for u in elig:
+            cut(u, u["cur"] - _r(u["cur"] * (1 - v / 100)))
     elif t == "fixed_off":
-        amount = sum(min(v, u) for u in units)
+        for u in elig:
+            cut(u, v)
     elif t == "bogo":
-        amount = sum(units[1::2])
+        for u in elig[1::2]:                      # the cheaper item of each pair is free
+            cut(u, u["cur"])
     elif t == "second_item_pct":
-        amount = sum(units[1::2]) * v / 100
+        for u in elig[1::2]:
+            cut(u, u["cur"] * v / 100)
     elif t == "buy_n_get_1" and n >= 1:
-        amount = sum(units[n::n + 1])
-    elif t == "buy_n_pct" and n >= 1 and len(units) >= n:
-        amount = es * v / 100
+        for u in elig[n::n + 1]:                  # every (N+1)th item, the cheaper one of its group
+            cut(u, u["cur"])
+    elif t == "buy_n_pct" and n >= 1 and len(elig) >= n:
+        for u in elig:
+            cut(u, u["cur"] * v / 100)
     elif t == "bundle_price" and n >= 2:
-        for i in range(0, len(units) - n + 1, n):
-            amount += max(0.0, sum(units[i:i + n]) - v)
-    elif t == "min_spend_pct" and es >= s:
-        amount = es * v / 100
-    elif t == "free_gift" and es >= s:
-        gift = (promo.get("gift_text") or "Free gift").strip()
-    elif t == "free_shipping" and es >= s:
+        pools = [elig]
+        if promo.get("bundle_same_product_only"):
+            by_pid: dict[str, list] = {}
+            for u in elig:
+                by_pid.setdefault(u["pid"], []).append(u)
+            pools = list(by_pid.values())
+        for pool in pools:
+            for i in range(0, len(pool) - n + 1, n):
+                group = pool[i:i + n]
+                total = sum(u["cur"] for u in group)
+                if total > v > 0:
+                    k = v / total                 # spread the saving over the items in the bundle
+                    for u in group:
+                        cut(u, u["cur"] * (1 - k))
+    elif t == "min_spend_pct" and spend >= s:
+        for u in elig:
+            cut(u, u["cur"] * v / 100)
+    elif t == "free_gift" and spend >= s:
+        gift = True
+    elif t == "free_shipping":
         ship = True
-    return round(min(amount, es), 2), ship, gift
+    return round(taken, 2), ship, gift
 
 
 def find_code(code: str | None, promos: list[dict] | None = None) -> dict | None:
@@ -216,42 +248,39 @@ def find_code(code: str | None, promos: list[dict] | None = None) -> dict | None
 
 
 def price_cart(lines: list[dict], code: str | None = None, promos: list[dict] | None = None) -> dict:
-    """What the promotions do to this cart.
+    """What the promotions do to this cart. Each line needs: product_id, price (one unit), qty, line_total.
 
-    Returns: subtotal, discount (EGP), discount_title, free_shipping (bool),
-    gifts (list of text), code_ok (None if no code typed, else True/False),
+    Returns: subtotal, discount (EGP, all promotions together), applied (list of {title, amount, what}),
+    free_shipping (bool), gifts (list of text), code_ok (None if no code typed, else True/False),
     note (one line for the order record, '' when nothing applied)."""
     promos = get_live_promotions() if promos is None else promos
     subtotal = round(sum(float(l["line_total"]) for l in lines), 2)
     code_promo = find_code(code, promos)
+    units = [{"pid": str(l.get("product_id")), "orig": float(l["price"]), "cur": float(l["price"])}
+             for l in lines for _ in range(int(l["qty"]))]
 
-    best_amount, best_promo = 0.0, None
-    free_ship, gifts, notes = False, [], []
-    for p in promos:
-        if not p.get("discount_type"):
-            continue  # old banner-only promotion
-        if p.get("code") and not (code_promo and p["id"] == code_promo["id"]):
-            continue  # needs its code
-        amount, ship, gift = _evaluate(p, lines)
+    usable = [p for p in promos if p.get("discount_type")
+              and (not p.get("code") or (code_promo and p["id"] == code_promo["id"]))]
+    usable.sort(key=lambda p: _GROUP.get(p["discount_type"], 9))  # stable: keeps newest-first inside a group
+
+    applied, free_ship, gifts = [], False, []
+    for p in usable:
+        amount, ship, gift = _apply(p, units)
+        if amount > 0:
+            applied.append({"title": p["message"], "amount": amount, "what": describe(p)})
         if ship:
             free_ship = True
-        if gift and gift not in gifts:
-            gifts.append(gift)
-        if amount > best_amount:
-            best_amount, best_promo = amount, p
+        if gift:
+            gifts.append(p["message"])
 
-    if best_promo:
-        notes.append(f"{best_promo['message']} (-{best_amount:g} EGP)")
+    discount = round(sum(a["amount"] for a in applied), 2)
+    notes = [f"{a['title']} (-{a['amount']:g} EGP)" for a in applied]
     if free_ship:
         notes.append("Free shipping")
-    for g in gifts:
-        notes.append(f"Free gift: {g}")
+    notes += [f"Free gift: {g}" for g in gifts]
     return {
-        "subtotal": subtotal,
-        "discount": best_amount,
-        "discount_title": best_promo["message"] if best_promo else "",
-        "free_shipping": free_ship,
-        "gifts": gifts,
+        "subtotal": subtotal, "discount": discount, "applied": applied,
+        "free_shipping": free_ship, "gifts": gifts,
         "code_ok": None if not (code or "").strip() else bool(code_promo),
         "note": " | ".join(notes),
     }
@@ -260,26 +289,26 @@ def price_cart(lines: list[dict], code: str | None = None, promos: list[dict] | 
 # ---------------------------------------------------------- shop prices ----
 def apply_sale_prices(products: list[dict], promos: list[dict] | None = None) -> list[dict]:
     """Shop/product-page prices. Only '% off' and 'Fixed amount off' promotions that have
-    no code change the price shown on a product. Sets price (sale), orig_price, sale_label.
-    Products without a sale come back untouched."""
+    no code change the price shown on a product (all of them, one after another, same as the cart).
+    Sets price (sale), orig_price, sale_label. Products without a sale come back untouched."""
     promos = get_live_promotions() if promos is None else promos
     sale = [p for p in promos if p.get("discount_type") in ("percent_off", "fixed_off") and not p.get("code")]
     if not sale:
         return products
     out = []
     for prod in products:
-        price = float(prod.get("price") or 0)
-        best, label = price, ""
+        orig = float(prod.get("price") or 0)
+        price, labels = orig, []
         for promo in sale:
             ids = _ids(promo)
             if ids and str(prod.get("id")) not in ids:
                 continue
             v = _num(promo.get("value"))
-            cand = _r(price * (1 - v / 100)) if promo["discount_type"] == "percent_off" else price - v
-            cand = float(max(cand, 0))
-            if cand < best:
-                best, label = cand, describe(promo)
-        if best < price:
-            prod = dict(prod, price=best, orig_price=price, sale_label=label)
+            new = _r(price * (1 - v / 100)) if promo["discount_type"] == "percent_off" else max(price - v, 0)
+            if new < price:
+                price = float(new)
+                labels.append(describe(promo))
+        if price < orig:
+            prod = dict(prod, price=price, orig_price=orig, sale_label=" + ".join(labels))
         out.append(prod)
     return out

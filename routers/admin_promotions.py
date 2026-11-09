@@ -1,3 +1,5 @@
+
+
 """Loomex admin: promotion routes (list, create, edit, activate, banner on/off, delete).
 Included into routers/admin.py, so every URL here is under /admin and needs the admin login."""
 
@@ -31,11 +33,11 @@ def _page(msg=None, error=None, form=None, editing=None, show_form=False, status
 def _promo_form(title: str = Form(""), subtitle: str = Form(""), link_choice: str = Form("/shop"),
                 link_url: str = Form(""), code: str = Form(""), product_ids: list[str] = Form([]),
                 discount_type: str = Form(""), value: str = Form(""), min_qty: str = Form(""),
-                min_spend: str = Form(""), gift_text: str = Form(""), starts: str = Form(""),
+                min_spend: str = Form(""), same_product: str = Form(""), starts: str = Form(""),
                 ends: str = Form(""), show_banner: str = Form("")) -> dict:
     return {"title": title, "subtitle": subtitle, "link_choice": link_choice, "link_url": link_url,
             "code": code, "product_ids": product_ids, "discount_type": discount_type, "value": value,
-            "min_qty": min_qty, "min_spend": min_spend, "gift_text": gift_text, "starts": starts,
+            "min_qty": min_qty, "min_spend": min_spend, "same_product": same_product, "starts": starts,
             "ends": ends, "show_banner": show_banner}
 
 

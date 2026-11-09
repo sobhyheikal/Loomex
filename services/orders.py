@@ -21,11 +21,18 @@ def upload_payment_proof(file_bytes: bytes, content_type: str, filename: str) ->
 
 def create_order(customer_name: str, phone: str, city: str, address: str,
                   lines: list[dict], subtotal: float, payment_method: str = "cod",
-                  payment_proof_url: str | None = None) -> str:
-    shipping = SHIPPING_RATES.get(city, 0)
-    total = subtotal + shipping
+                  payment_proof_url: str | None = None, pricing: dict | None = None) -> str:
+    pricing = pricing or {}
+    discount = float(pricing.get("discount") or 0)
+    shipping = 0 if pricing.get("free_shipping") else SHIPPING_RATES.get(city, 0)
+    total = max(subtotal - discount, 0) + shipping
 
-    order_number = f"LMX-{uuid.uuid4().hex[:8].upper()}"
+    try:
+        order_number = supabase.rpc("next_order_number").execute().data
+        if not isinstance(order_number, str) or not order_number:
+            raise ValueError("no order number")
+    except Exception:
+        order_number = f"LMX-{uuid.uuid4().hex[:8].upper()}"  # backup so checkout never breaks
 
     order_insert = supabase.table("orders").insert({
         "order_number": order_number,
@@ -38,6 +45,8 @@ def create_order(customer_name: str, phone: str, city: str, address: str,
         "payment_proof_url": payment_proof_url,
         "shipping": shipping,
         "total": total,
+        "discount": discount,
+        "promotion_note": pricing.get("note") or None,
         "status": "new",
     }).execute()
     order_id = order_insert.data[0]["id"]

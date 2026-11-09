@@ -73,7 +73,16 @@ PROMO_JS = """
     var on = sel.value === '__custom';
     custom.hidden = !on; custom.querySelector('input').required = on;
   }
-  sel.addEventListener('change', link); link();
+  function autoPick() {
+    var v = sel.value, isCat = v.indexOf('/shop?category=') === 0;
+    if (v !== '/shop' && !isCat) return;   /* custom / no link: leave the picks alone */
+    var cat = isCat ? decodeURIComponent(v.slice(15)) : null;
+    boxes.forEach(function (b) {
+      b.checked = !cat || b.closest('.pm-prod').dataset.cat === cat;
+    });
+    upd();
+  }
+  sel.addEventListener('change', function () { link(); autoPick(); }); link();
 
   /* discount type: show only the boxes this type needs, mark required / optional */
   var radios = form.querySelectorAll('input[name=discount_type]'), fields = form.querySelectorAll('.pm-dfield');
@@ -117,7 +126,7 @@ def _form(f: dict, picker: list, categories: list, editing_id: str | None) -> st
     selected = {str(x) for x in (f.get("product_ids") or [])}
     cur_type = f.get("discount_type") or ""
     products = "".join(
-        f'<label class="pm-prod"><input type="checkbox" name="product_ids" value="{escape(str(p["id"]))}"'
+        f'<label class="pm-prod" data-cat="{escape(str(p.get("category") or ""))}"><input type="checkbox" name="product_ids" value="{escape(str(p["id"]))}"'
         f'{" checked" if str(p["id"]) in selected else ""}><span class="pm-dot"></span><span>{escape(p["name"])}</span></label>'
         for p in picker) or '<p class="hint" style="grid-column:1/-1;margin:0">No products yet.</p>'
     types = "".join(

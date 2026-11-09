@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import templates
 from config import CATEGORIES, SUBCATEGORIES
-from services.cart import get_cart, save_cart, cart_item_count, resolve_cart, sold_out_reason
+from services.cart import get_cart, save_cart, cart_item_count, resolve_cart, sold_out_reason, cart_pricing
 from services.products import get_product_or_404
 router = APIRouter()
 
@@ -15,9 +15,14 @@ def _wants_json(request: Request) -> bool:
 
 def _drawer_payload(cart: list[dict]) -> dict:
     lines, subtotal = resolve_cart(cart)
+    pricing = cart_pricing(lines)
     return {
         "count": cart_item_count(cart),
         "subtotal": subtotal,
+        "discount": pricing["discount"],
+        "total": round(subtotal - pricing["discount"], 2),
+                "applied": pricing["applied"],
+        "gifts": pricing["gifts"],
         "lines": [
             {
                 "index": l["index"],
@@ -83,7 +88,8 @@ def view_cart(request: Request):
     cart = get_cart(request)
     lines, subtotal = resolve_cart(cart)
     cart_count = cart_item_count(cart)
-    return templates.cart_page(lines, subtotal, CATEGORIES, cart_count, subcategories=SUBCATEGORIES)
+    return templates.cart_page(lines, subtotal, CATEGORIES, cart_count, subcategories=SUBCATEGORIES,
+                               pricing=cart_pricing(lines))
 
 
 @router.post("/cart/update")

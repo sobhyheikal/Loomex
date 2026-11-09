@@ -174,6 +174,159 @@ span.social-link { cursor: default; }
 @media (min-width: 900px) { .footer-inner { max-width: var(--max-wide); padding: 16px 32px; } }
 </style>
 """
+_PROMO_BANNER_JS = """<script>
+(function(){
+  var v=document.querySelector('.promo-banner-view');
+  if(!v)return;
+  var t=v.firstElementChild;
+  var orig=t.innerHTML, SPEED=45, GAP=48, lastW=0, timer=null;
+  function setup(){
+    lastW=v.clientWidth;
+    t.classList.remove('scroll');
+    t.innerHTML=orig;
+    t.style.animationDuration='';
+    t.style.animationDelay='';
+    if(t.scrollWidth<=v.clientWidth+1)return;
+    var dur=Math.max(8,(t.scrollWidth+GAP)/SPEED);
+    t.innerHTML=orig+orig;
+    t.classList.add('scroll');
+    var t0=Date.now();
+    try{
+      var s=parseInt(sessionStorage.getItem('promoBannerT0'),10);
+      if(s){t0=s;}else{sessionStorage.setItem('promoBannerT0',String(t0));}
+    }catch(e){}
+    var off=((Date.now()-t0)/1000)%dur;
+    t.style.animationDuration=dur+'s';
+    t.style.animationDelay='-'+off+'s';
+  }
+  function start(){setup();}
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(start);}
+  else{window.addEventListener('load',start);}
+  window.addEventListener('resize',function(){
+    clearTimeout(timer);
+    timer=setTimeout(function(){if(v.clientWidth!==lastW)setup();},150);
+  });
+  window.addEventListener('pageshow',function(e){if(e.persisted)setup();});
+})();
+</script>"""
+
+
+def _promo_banner_html() -> str:
+    try:
+        from services.promotions import get_banner_promotions
+        promos = get_banner_promotions()
+    except Exception:
+        return ""
+    if not promos:
+        return ""
+    p = promos[0]  # newest live promotion
+
+    message = (p.get("message") or "").strip()
+    if not message:
+        return ""
+    subtitle = (p.get("subtitle") or "").strip()
+    url = (p.get("link_url") or "").strip()
+    safe = (url.startswith("/") and not url.startswith("//")) or url.startswith(("https://", "http://"))
+
+    sub_html = f'<span class="promo-banner-sub">{escape(subtitle)}</span>' if subtitle else ""
+    btn = ""
+    if url and safe:
+        btn_label = (p.get("link_text") or "").strip() or "Shop now"
+        btn = f'<a class="promo-banner-btn" href="{escape(url)}">{escape(btn_label)}</a>'
+
+    return (
+        '<div class="promo-banner"><div class="promo-banner-view"><div class="promo-banner-track">'
+        f'<span class="promo-banner-item"><span class="promo-banner-text">{escape(message)}</span>{sub_html}</span>'
+        f'</div></div>{btn}</div>{_PROMO_BANNER_JS}'
+    )
+    try:
+        from services.promotions import get_banner_promotions
+        promos = get_banner_promotions()
+    except Exception:
+        return ""
+    if not promos:
+        return ""
+    p = promos[0]  # newest live promotion
+
+    message = (p.get("message") or "").strip()
+    if not message:
+        return ""
+    subtitle = (p.get("subtitle") or "").strip()
+    url = (p.get("link_url") or "").strip()
+    safe = (url.startswith("/") and not url.startswith("//")) or url.startswith(("https://", "http://"))
+
+    sub_html = f'<span class="promo-banner-sub">{escape(subtitle)}</span>' if subtitle else ""
+    btn = ""
+    if url and safe:
+        btn_label = (p.get("link_text") or "").strip() or "Shop now"
+        btn = f'<a class="promo-banner-btn" href="{escape(url)}">{escape(btn_label)}</a>'
+
+    return (f'<div class="promo-banner"><span class="promo-banner-text">{escape(message)}</span>'
+            f'{sub_html}{btn}</div>')
+    try:
+        from services.promotions import get_banner_promotions, describe
+        promos = get_banner_promotions()
+    except Exception:
+        return ""
+    if not promos:
+        return ""
+    p = promos[0]  # newest live promotion
+
+    def first(*keys):
+        for k in keys:
+            v = p.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        return ""
+
+    title = first("banner_text", "banner_title", "title", "name", "headline")
+    off = describe(p)
+    off = "" if off == "Banner only" else off
+    label = f"{title} · {off}" if title and off else (title or off)
+    if not label:
+        return ""
+
+    url = first("link_url", "link", "url", "cta_url", "button_url", "href")
+    if not (url.startswith("/") and not url.startswith("//")) and not url.startswith(("https://", "http://")):
+        url = ""
+    btn_label = first("button_text", "cta_text", "cta_label", "button_label") or "Shop now"
+    btn = f'<a class="promo-banner-btn" href="{escape(url)}">{escape(btn_label)}</a>' if url else ""
+
+    return f'<div class="promo-banner"><span class="promo-banner-text">{escape(label)}</span>{btn}</div>'
+    try:
+        from services.promotions import get_banner_promotions, describe
+        promos = get_banner_promotions()
+    except Exception:
+        return ""
+    parts = []
+    for p in promos:
+        text = (p.get("banner_text") or p.get("title") or p.get("name") or "").strip()
+        off = describe(p)
+        off = "" if off == "Banner only" else off
+        label = f"{text} — {off}" if text and off else (text or off)
+        if label:
+            parts.append(escape(label))
+    if not parts:
+        return ""
+    return f'<div class="promo-banner">{"  ·  ".join(parts)}</div>'
+_BADGE_TYPES = {"percent_off", "fixed_off", "bogo", "second_item_pct",
+                "buy_n_get_1", "buy_n_pct", "bundle_price", "min_spend_pct"}
+
+
+def _promo_badge(p: dict) -> str:
+    try:
+        from services.promotions import get_live_promotions, describe
+        pid = str(p.get("id") or "")
+        for promo in get_live_promotions():  # newest first
+            if promo.get("discount_type") not in _BADGE_TYPES or promo.get("code"):
+                continue
+            ids = {str(i) for i in (promo.get("product_ids") or [])}
+            if ids and pid not in ids:  # empty list = covers every product
+                continue
+            return f'<span class="promo-badge">{escape(describe(promo))}</span>'
+    except Exception:
+        pass
+    return ""
 def layout(title: str, body: str, categories: list, cart_count: int = 0,
            section_class: str = "", active_category: str | None = None,
            subcategories: dict | None = None, active_subcategory: str | None = None,
@@ -193,6 +346,8 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
     image = image or DEFAULT_OG_IMAGE
     og_url_tag = f'<meta property="og:url" content="{escape(SITE_URL + path)}">' if SITE_URL else ""
     pixel_snippet = _meta_pixel_script(meta_pixel_events) + _tiktok_pixel_script(tiktok_pixel_events)
+    promo_banner = _promo_banner_html()
+    body_class = f"{section_class} has-banner".strip() if promo_banner else section_class
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -214,10 +369,10 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 {FONTS}
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="stylesheet" href="/static/style.css?v=2">
+<link rel="stylesheet" href="/static/style.css?v=6">
 {pixel_snippet}
 </head>
-<body class="{section_class}">
+<body class="{body_class}">
 <input type="checkbox" id="menu-toggle" class="menu-toggle-input">
 <label for="menu-toggle" class="drawer-backdrop"></label>
 <nav class="drawer">
@@ -230,6 +385,7 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 </nav>
 
 <header class="topbar">
+{promo_banner}
   <div class="topbar-inner">
     <div class="topbar-left">
       <label for="menu-toggle" class="hamburger-btn" aria-label="Open menu">
@@ -280,7 +436,7 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
     </div>
   </div>
 </footer>
-<script src="/static/cart-drawer.js" defer></script>
+<script src="/static/cart-drawer.js?v=2" defer></script>
 </body>
 </html>"""
 
@@ -960,6 +1116,8 @@ SHOP_CSS = """
 .subtab.active{color:var(--gold);background:none;box-shadow:inset 0 -2px 0 var(--gold);}
 @media (min-width:560px){.subtabs{justify-content:center;}}
 @media (min-width:900px){.subtabs{padding-left:32px;padding-right:32px;}}
+.promo-banner-sub { display: none; font-size: 13px; opacity: 0.8; }
+@media (min-width: 700px) { .promo-banner-sub { display: inline; } }
 </style>
 <script>
 function cardShowColor(el, ci){
@@ -1082,7 +1240,7 @@ def shop_page(products: list, categories: list, active_category: str | None, car
                 f"""<a href="/product/{escape(p['slug'])}" class="card{' is-sold' if gone else ''}">
                       {media}
                       <div class="card-body">
-                        <p class="card-name">{escape(p['name'])}</p>
+                      {_promo_badge(p)}<p class="card-name">{escape(p['name'])}</p>
                         <p class="card-price">{p['price']:.0f} EGP</p>
                         {swatch_row}
                         {'<span class="card-soldbtn">Sold out</span>' if gone else ''}
@@ -1356,7 +1514,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
 
 
 def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 0,
-              subcategories: dict | None = None) -> str:
+              subcategories: dict | None = None, pricing: dict | None = None) -> str:
     if not lines:
         body = """
 <div class="wrap">
@@ -1368,6 +1526,19 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
         return layout("Your Cart", body, categories, cart_count, subcategories=subcategories, path="/cart",
                       section_class="cart-page")
 
+    pricing = pricing or {"discount": 0, "applied": []}
+    discount_html = "".join(
+        f'<div class="summary-line" style="color:var(--gold);"><span>{escape(a["title"])} ({escape(a["what"])})</span>'
+        f'<span>&minus;{a["amount"]:.0f} EGP</span></div>'
+        for a in pricing["applied"]
+    )
+    total = subtotal - pricing["discount"]
+    gift_html = (
+        '<div style="margin:14px 0;padding:12px 14px;border:1px dashed var(--gold);color:var(--gold);'
+        'font-size:13.5px;line-height:1.5;text-align:center;">'
+        '&#127873; <strong>Good news!</strong> You\'ll get a free gift with this order.</div>'
+        if pricing.get("gifts") else ""
+    )
     rows = []
     for line in lines:
         variant = " · ".join(v for v in [line["size"], line["color"]] if v)
@@ -1399,9 +1570,15 @@ def cart_page(lines: list, subtotal: float, categories: list, cart_count: int = 
 <div class="wrap">
   <h1 class="display">Your Cart</h1>
   <div class="cart-lines">{''.join(rows)}</div>
-  <div class="summary-line summary-total" style="border-top:1px solid var(--line);margin-top:10px;padding-top:14px;">
+   <div class="summary-line" style="border-top:1px solid var(--line);margin-top:10px;padding-top:14px;">
     <span>Subtotal</span>
     <span>{subtotal:.0f} EGP</span>
+  </div>
+  {discount_html}
+  {gift_html}
+  <div class="summary-line summary-total">
+    <span>Total</span>
+    <span>{total:.0f} EGP</span>
   </div>
   <p style="color:var(--paper-dim);font-size:12.5px;margin:8px 0 20px;">Shipping cost is calculated at checkout based on your city.</p>
   <a href="/checkout" class="btn">Checkout</a>
@@ -1451,9 +1628,24 @@ CHECKOUT_CSS = """
 </style>
 """
 
-
 def checkout_page(lines: list, subtotal: float, categories: list, cart_count: int = 0, error: str | None = None,
-                   subcategories: dict | None = None) -> str:
+                   subcategories: dict | None = None, pricing: dict | None = None) -> str:
+    pricing = pricing or {}
+    discount = float(pricing.get("discount") or 0)
+    free_ship = bool(pricing.get("free_shipping"))
+    net = max(subtotal - discount, 0)
+    shipping_text = "Free" if free_ship else "—"
+    free_ship_js = "true" if free_ship else "false"
+    hint_style = ' style="display:none"' if free_ship else ""
+    discount_rows = "".join(
+        f'<div class="summary-line" style="color:var(--gold);"><span>{escape(a["title"])} ({escape(a["what"])})</span>'
+        f'<span>&minus;{a["amount"]:.0f} EGP</span></div>'
+        for a in pricing.get("applied", [])
+    )
+    gift_rows = "".join(
+        f'<div class="summary-line" style="color:var(--gold);"><span>Free gift: {escape(g)}</span><span>Included</span></div>'
+        for g in pricing.get("gifts", [])
+    )
     summary_rows = "".join(
         f"""<div class="summary-line">
               <span>{escape(l['name'])} ({escape(l['size'])}{", " + escape(l['color']) if l['color'] else ""}) × {l['qty']}</span>
@@ -1479,20 +1671,21 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
   <p class="sub">Almost there — fill in your details below.</p>
 
   {summary_rows}
-  <div class="summary-line">
+    <div class="summary-line">
     <span>Subtotal</span>
     <span>{subtotal:.0f} EGP</span>
   </div>
+  {discount_rows}
+  {gift_rows}
   <div class="summary-line" id="shipping-row">
     <span>Shipping</span>
-    <span id="shipping-amount">—</span>
+    <span id="shipping-amount">{shipping_text}</span>
   </div>
   <div class="summary-line summary-total">
     <span>Total</span>
-    <span id="total-amount">{subtotal:.0f} EGP</span>
+    <span id="total-amount">{net:.0f} EGP</span>
   </div>
-  <p class="checkout-hint" id="shipping-hint">Select your city below to see the shipping cost.</p>
-
+  <p class="checkout-hint" id="shipping-hint"{hint_style}>Select your city below to see the shipping cost.</p>
   {error_html}
 
   <p class="checkout-required">All fields marked <span class="req">*</span> are required.</p>
@@ -1555,12 +1748,13 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
 
 <script>
 var LOOMEX_RATES = {rates_json};
-var LOOMEX_SUBTOTAL = {subtotal:.2f};
+var LOOMEX_SUBTOTAL = {net:.2f};
+var LOOMEX_FREE_SHIP = {free_ship_js};
 function loomexUpdateShipping(city) {{
   var rate = LOOMEX_RATES[city];
   if (rate === undefined) return;
-  document.getElementById('shipping-amount').textContent = rate.toFixed(0) + ' EGP';
-  document.getElementById('total-amount').textContent = (LOOMEX_SUBTOTAL + rate).toFixed(0) + ' EGP';
+  if (LOOMEX_FREE_SHIP) rate = 0;
+  document.getElementById('shipping-amount').textContent = LOOMEX_FREE_SHIP ? 'Free' : rate.toFixed(0) + ' EGP';
   document.getElementById('shipping-hint').style.display = 'none';
   loomexCheckCity();
 }}
@@ -1643,7 +1837,7 @@ function loomexRow(label, value, cls) {{
 }}
 function loomexOpenReview() {{
   var city = document.getElementById('city-select').value;
-  var rate = LOOMEX_RATES[city] || 0;
+  var rate = LOOMEX_FREE_SHIP ? 0 : (LOOMEX_RATES[city] || 0);
   var rows = document.getElementById('review-rows');
   rows.innerHTML = '';
   rows.appendChild(loomexRow('Name', loomexCleanName()));
@@ -1651,8 +1845,8 @@ function loomexOpenReview() {{
   rows.appendChild(loomexRow('City', city));
   rows.appendChild(loomexRow('Address', document.getElementById('f-address').value.trim()));
   rows.appendChild(loomexRow('Payment', 'Cash on Delivery'));
-  rows.appendChild(loomexRow('Subtotal', LOOMEX_SUBTOTAL.toFixed(0) + ' EGP'));
-  rows.appendChild(loomexRow('Shipping', rate.toFixed(0) + ' EGP'));
+  rows.appendChild(loomexRow('Items (after discount)', LOOMEX_SUBTOTAL.toFixed(0) + ' EGP'));
+  rows.appendChild(loomexRow('Shipping', LOOMEX_FREE_SHIP ? 'Free' : rate.toFixed(0) + ' EGP'));
   rows.appendChild(loomexRow('Total', (LOOMEX_SUBTOTAL + rate).toFixed(0) + ' EGP', 'total'));
   document.getElementById('review').hidden = false;
   document.getElementById('review-confirm').focus();
@@ -1771,7 +1965,19 @@ def success_page(order: dict, categories: list, subcategories: dict | None = Non
     items = order.get("items") or []
     subtotal = sum(float(i["unit_price"]) * int(i["quantity"]) for i in items)
     shipping = float(order.get("shipping") or 0)
-    total = float(order.get("total") or (subtotal + shipping))
+    discount = float(order.get("discount") or 0)
+    total = float(order.get("total") or (subtotal - discount + shipping))
+    note_parts = [x.strip() for x in (order.get("promotion_note") or "").split("|")]
+    free_ship = shipping == 0 and "Free shipping" in note_parts
+    shipping_text = "FREE" if free_ship else f"{shipping:.0f} EGP"
+    gifts = [x[len("Free gift:"):].strip() for x in note_parts if x.startswith("Free gift:")]
+    gift_rows = "".join(
+        f'<div class="receipt-total-row"><span>FREE GIFT</span><span>{escape(g)}</span></div>' for g in gifts
+    )
+    discount_row = (
+        f'<div class="receipt-total-row"><span>DISCOUNT</span><span>-{discount:.0f} EGP</span></div>'
+        if discount > 0 else ""
+    )
     payment_label = PAYMENT_LABELS.get(order.get("payment_method"), "Cash on Delivery")
 
     created_at = order.get("created_at") or ""
@@ -1828,8 +2034,9 @@ def success_page(order: dict, categories: list, subcategories: dict | None = Non
 
     <div class="receipt-totals">
       <div class="receipt-total-row"><span>SUBTOTAL</span><span>{subtotal:.0f} EGP</span></div>
-      <div class="receipt-total-row"><span>SHIPPING</span><span>{shipping:.0f} EGP</span></div>
-      <div class="receipt-total-row receipt-total-main"><span>TOTAL</span><span>{total:.0f} EGP</span></div>
+      {discount_row}
+      <div class="receipt-total-row"><span>SHIPPING</span><span>{shipping_text}</span></div>
+      {gift_rows}
     </div>
 
     <div class="receipt-payment-box">
