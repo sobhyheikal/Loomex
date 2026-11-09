@@ -10,13 +10,14 @@ from services.promotions import _parse, promo_state
 from templates import FONTS
 
 NAV = [("orders", "Orders"), ("products", "Products"), ("customers", "Customers"),
-       ("promotions", "Promotions"), ("earnings", "Earnings"), ("profile", "Profile")]
+       ("promotions", "Promotions"), ("profile", "Profile")]
 
 ADMIN_CSS = """
 <style>
 :root{--ink:#201c18;--ink-raised:#2a241e;--stone:#e7e2d6;--paper:#f1ece2;--paper-dim:#b9b2a4;
   --gold:#c79a46;--gold-dim:#8f7239;--teal:#4f6d6a;--line:rgba(241,236,226,.14);}
 *{box-sizing:border-box;}
+[hidden]{display:none !important;}
 html,body{margin:0;background:var(--ink);color:var(--paper);font-family:"Inter",-apple-system,sans-serif;
   -webkit-font-smoothing:antialiased;}
 a{color:inherit;text-decoration:none;}
@@ -202,6 +203,9 @@ def admin_page(title: str, body: str, active: str = "", msg: str | None = None) 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow"><title>{escape(title)} · Loomex Admin</title>
+<link rel="manifest" href="/admin/manifest.webmanifest"><meta name="theme-color" content="#201c18">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="LX Admin">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 {FONTS}<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">{ADMIN_CSS}</head>
 <body>
 <input type="checkbox" id="am" class="am-toggle">
@@ -272,6 +276,101 @@ def login_page(configured: bool = True, error: str | None = None, first_time: bo
 <p class="sub" style="margin-top:6px">Admin panel</p>{inner}</div></body></html>"""
 
 
+PUSH_CARD = """
+<div class="card" id="push-card">
+<h3 style="margin:0 0 6px;font:600 11px Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Order notifications</h3>
+<p class="hint" style="margin:0 0 14px">Get an alert on this device for every new order. On iPhone, open the admin from the home screen icon first (Share, then Add to Home Screen).</p>
+<p class="s" id="push-status" style="margin:0 0 12px"></p>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<button type="button" class="btn" id="push-on">Enable notifications</button>
+<button type="button" class="btn ghost" id="push-test" hidden>Send test</button>
+<button type="button" class="btn ghost" id="push-off" hidden>Turn off</button>
+</div>
+</div>
+<script>
+(function () {
+  var st = document.getElementById('push-status');
+  var on = document.getElementById('push-on'), test = document.getElementById('push-test'), off = document.getElementById('push-off');
+  if (!st) return;
+  function say(t) { st.textContent = t; }
+  function ui(enabled) { on.hidden = enabled; test.hidden = !enabled; off.hidden = !enabled; }
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  var ok = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+  if (!ok) {
+    on.hidden = true;
+    say(ios && !standalone ? 'On iPhone, add this page to your Home Screen, open it from there, then come back here.'
+                           : 'This browser does not support notifications.');
+    return;
+  }
+  function keyBytes(b64) {
+    var pad = '='.repeat((4 - b64.length % 4) % 4);
+    var raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function post(url, body) {
+    return fetch(url, {method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body || {})});
+  }
+  function registration() {
+    return navigator.serviceWorker.register('/admin/sw.js', {scope: '/admin/'})
+      .then(function () { return navigator.serviceWorker.ready; });
+  }
+  function refresh() {
+    return navigator.serviceWorker.getRegistration('/admin/').then(function (reg) {
+      return reg ? reg.pushManager.getSubscription() : null;
+    }).then(function (sub) {
+      var enabled = !!sub && Notification.permission === 'granted';
+      ui(enabled);
+      if (enabled) say('Notifications are ON for this device.');
+      else if (Notification.permission === 'denied') say('Notifications are blocked. Allow them in your browser or phone settings, then try again.');
+      else say('Notifications are off.');
+    }).catch(function () { say('Notifications are off.'); });
+  }
+  on.addEventListener('click', function () {
+    on.disabled = true; say('Setting up...');
+    var reg;
+    registration().then(function (r) {
+      reg = r;
+      return Notification.requestPermission();
+    }).then(function (perm) {
+      if (perm !== 'granted') throw new Error('Permission was not given.');
+      return fetch('/admin/push/key', {credentials: 'same-origin'}).then(function (r) { return r.json(); });
+    }).then(function (k) {
+      if (!k.configured || !k.key) throw new Error('Push is not set up on the server yet (the VAPID keys are missing in Vercel).');
+      return reg.pushManager.getSubscription().then(function (existing) {
+        return existing || reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: keyBytes(k.key)});
+      });
+    }).then(function (sub) {
+      return post('/admin/push/subscribe', sub.toJSON()).then(function (r) {
+        if (!r.ok) throw new Error('The server could not save this device.');
+      });
+    }).then(function () { return refresh(); }).catch(function (e) {
+      say((e && e.message) || 'Something went wrong. Try again.');
+    }).then(function () { on.disabled = false; });
+  });
+  test.addEventListener('click', function () {
+    test.disabled = true; say('Sending a test...');
+    post('/admin/push/test').then(function (r) { return r.json(); }).then(function (j) {
+      say(j.sent ? 'Test sent. It should arrive in a moment.' : 'Nothing was sent. Turn notifications off and on again.');
+    }).catch(function () { say('Could not send the test.'); }).then(function () { test.disabled = false; });
+  });
+  off.addEventListener('click', function () {
+    navigator.serviceWorker.getRegistration('/admin/').then(function (reg) {
+      return reg ? reg.pushManager.getSubscription() : null;
+    }).then(function (sub) {
+      if (!sub) return;
+      return post('/admin/push/unsubscribe', {endpoint: sub.endpoint}).then(function () { return sub.unsubscribe(); });
+    }).then(function () { return refresh(); });
+  });
+  refresh();
+})();
+</script>
+"""
+
+
 def profile_page(email: str, msg: str | None = None, error: str | None = None, form_email: str = "") -> str:
     err = f'<div class="err"><strong>{escape(error)}</strong></div>' if error else ""
     body = f"""<div class="head"><div><h1>Profile</h1>
@@ -282,7 +381,8 @@ def profile_page(email: str, msg: str | None = None, error: str | None = None, f
 <div class="fg"><label class="f">New password</label><input type="password" name="new_password" autocomplete="new-password" required>
 <p class="hint">At least 8 characters. Changing it logs out your other devices.</p></div>
 <div class="fg"><label class="f">Confirm new password</label><input type="password" name="confirm_password" autocomplete="new-password" required></div>
-<button class="btn">Change password</button></form>"""
+<button class="btn">Change password</button></form>
+{PUSH_CARD}"""
     return admin_page("Profile", body, "profile", msg)
 
 
