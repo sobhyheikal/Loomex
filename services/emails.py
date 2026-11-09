@@ -176,3 +176,79 @@ def send_order_confirmation(order: dict) -> bool:
     except Exception as e:
         print("Order email failed:", e)
         return False
+
+
+# ------------------------------------------------------- new-order alert ----
+ADMIN_EMAIL = "loomex.co@gmail.com"
+
+
+def build_admin_html(order: dict) -> str:
+    s = _summary(order)
+    rows = ""
+    for i in s["items"]:
+        variant = " / ".join(v for v in [i.get("size"), i.get("color")] if v)
+        qty = int(i.get("quantity") or 0)
+        rows += (f'<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">{escape(str(i.get("product_name") or ""))}'
+                 f'{" (" + escape(variant) + ")" if variant else ""} &times; {qty}</td>'
+                 f'<td align="right" style="padding:6px 0;border-bottom:1px solid #eee;white-space:nowrap;">'
+                 f'{_money(float(i.get("unit_price") or 0) * qty)}</td></tr>')
+
+    def row(label, value):
+        return (f'<tr><td style="padding:3px 12px 3px 0;color:#777;vertical-align:top;">{label}</td>'
+                f'<td style="padding:3px 0;">{value}</td></tr>')
+
+    discount = f"-{_money(s['discount'])}" if s["discount"] > 0 else ""
+    info = (row("Customer", escape(order.get("customer_name") or ""))
+            + row("Phone", escape(order.get("phone") or ""))
+            + row("Email", escape(order.get("email") or "-"))
+            + row("City", escape(order.get("city") or ""))
+            + row("Address", escape(order.get("address") or ""))
+            + row("Payment", escape(s["pay"])))
+    if order.get("delivery_notes"):
+        info += row("Notes", escape(order["delivery_notes"]))
+    if order.get("payment_proof_url"):
+        info += row("Payment proof", f'<a href="{escape(order["payment_proof_url"])}">View screenshot</a>')
+    if order.get("promotion_note"):
+        info += row("Promotions", escape(order["promotion_note"]))
+
+    return f"""<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;max-width:520px;">
+<h2 style="margin:0 0 4px;">New order {escape(s['number'])}</h2>
+<p style="margin:0 0 16px;color:#777;">Total <strong style="color:#222;">{_money(s['total'])}</strong></p>
+<table cellpadding="0" cellspacing="0" width="100%">{rows}</table>
+<table cellpadding="0" cellspacing="0" width="100%" style="margin:10px 0 18px;">
+<tr><td style="padding:3px 0;color:#777;">Subtotal</td><td align="right">{_money(s['subtotal'])}</td></tr>
+{f'<tr><td style="padding:3px 0;color:#777;">Discount</td><td align="right">{discount}</td></tr>' if discount else ''}
+<tr><td style="padding:3px 0;color:#777;">Shipping</td><td align="right">{'Free' if s['shipping'] == 0 else _money(s['shipping'])}</td></tr>
+<tr><td style="padding:6px 0;font-weight:700;">Total</td><td align="right" style="font-weight:700;">{_money(s['total'])}</td></tr>
+</table>
+<table cellpadding="0" cellspacing="0">{info}</table>
+<p style="margin:20px 0 0;"><a href="{SITE}/admin/orders" style="background:#c19a57;color:#201c18;padding:10px 18px;text-decoration:none;font-weight:700;border-radius:6px;">Open admin</a></p>
+</div>"""
+
+
+def send_admin_new_order(order: dict) -> bool:
+    """Email loomex.co@gmail.com about a new order. Returns True if Resend accepted it. Never raises."""
+    key = os.environ.get("RESEND_API_KEY")
+    if not key:
+        return False
+    try:
+        s = _summary(order)
+        text = (f"New order {s['number']} - {_money(s['total'])}\n"
+                f"{order.get('customer_name')} - {order.get('phone')} - {order.get('city')}\n"
+                f"{SITE}/admin/orders")
+        payload = {
+            "from": EMAIL_FROM,
+            "to": [ADMIN_EMAIL],
+            "subject": f"New order {s['number']} · {_money(s['total'])}",
+            "html": build_admin_html(order),
+            "text": text,
+        }
+        customer = (order.get("email") or "").strip()
+        if customer:
+            payload["reply_to"] = customer
+        resend.api_key = key
+        resend.Emails.send(payload)
+        return True
+    except Exception as e:
+        print("Admin order email failed:", e)
+        return False

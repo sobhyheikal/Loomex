@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import templates
 from config import CATEGORIES, SUBCATEGORIES
-from routers import pages, products, cart, checkout, admin
+from routers import pages, products, cart, checkout, admin, admin_push
 from services.admin_auth import AdminLoginRequired
 from fastapi.responses import RedirectResponse
 from services.cart import get_cart, cart_item_count
@@ -29,6 +29,7 @@ app.include_router(products.router)
 app.include_router(cart.router)
 app.include_router(checkout.router)
 app.include_router(admin.public_router)
+app.include_router(admin_push.public_router)
 app.include_router(admin.router)
 
 

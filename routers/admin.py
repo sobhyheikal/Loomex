@@ -242,3 +242,5 @@ from routers import admin_promotions  # noqa: E402
 router.include_router(admin_promotions.router)
 from routers import admin_earnings  # noqa: E402
 router.include_router(admin_earnings.router)
+from routers import admin_push  # noqa: E402
+router.include_router(admin_push.router)

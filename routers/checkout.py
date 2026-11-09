@@ -6,7 +6,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import templates
 from config import CATEGORIES, PAYMENT_METHODS, SHIPPING_RATES, SUBCATEGORIES
 from services.cart import get_cart, save_cart, cart_item_count, resolve_cart, cart_pricing
-from services.emails import send_order_confirmation
+from services.emails import send_admin_new_order, send_order_confirmation
+from services.push import send_order_push
 from services.orders import create_order, get_order_by_number, upload_payment_proof
 
 router = APIRouter()
@@ -99,12 +100,19 @@ def place_order(
                                 payment_method=payment_method, payment_proof_url=payment_proof_url,
                                 pricing=pricing, email=email, delivery_notes=delivery_notes)
 
-    try:  # a failed email must never stop an order from going through
+    order = None
+    try:
         order = get_order_by_number(order_number)
-        if order:
-            send_order_confirmation(order)
     except Exception as e:
-        print("Order email error:", e)
+        print("Order lookup error:", e)
+    if order:
+        # alerts for you first, then the customer's confirmation.
+        # Each one may fail without stopping the order from going through.
+        for notify in (send_order_push, send_admin_new_order, send_order_confirmation):
+            try:
+                notify(order)
+            except Exception as e:
+                print("Order notification error:", e)
 
     resp = RedirectResponse(url=f"/order/{order_number}", status_code=303)
     save_cart(resp, [])  # empty the cart now that the order is placed
