@@ -2108,6 +2108,7 @@ def success_page(order: dict, categories: list, subcategories: dict | None = Non
       {discount_row}
       <div class="receipt-total-row"><span>SHIPPING</span><span>{shipping_text}</span></div>
       {gift_rows}
+      <div class="receipt-total-row receipt-total-main"><span>TOTAL</span><span>{total:.0f} EGP</span></div>
     </div>
 
     <div class="receipt-payment-box">
