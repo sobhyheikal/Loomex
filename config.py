@@ -13,7 +13,7 @@ CART_COOKIE = "loomex_cart"
 # "https://loomex.com" — no trailing slash. Used to build absolute
 # Open Graph (og:url) tags for social-sharing previews. Leave blank until
 # you have one; og:url is just omitted until then.
-SITE_URL = ""
+SITE_URL = "https://www.loomexclothing.com"
 
 # Ad pixels — from Meta Events Manager / TikTok Ads Manager -> "Set up
 # pixel" -> "Add code manually". Leave either blank to keep that pixel
