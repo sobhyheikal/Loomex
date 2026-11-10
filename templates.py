@@ -171,7 +171,6 @@ FOOTER_CSS = """
 .social-link svg { width: 22px; height: 22px; }
 a.social-link:hover { color: var(--gold); }
 span.social-link { cursor: default; }
-@media (min-width: 900px) { .footer-inner { max-width: var(--max-wide); padding: 16px 32px; } }
 </style>
 """
 _PROMO_BANNER_JS = """<script>
@@ -299,9 +298,9 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 <meta name="twitter:description" content="{escape(description)}">
 <meta name="twitter:image" content="{escape(image)}">
 {FONTS}
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="stylesheet" href="/static/style.css?v=6">
+<link rel="icon" type="image/png" href="/static/loomex-icon-v5.png"><link rel="apple-touch-icon" href="/static/loomex-icon-v5.png">
+
+<link rel="stylesheet" href="/static/style.css?v=7">
 {pixel_snippet}
 </head>
 <body class="{body_class}">
@@ -410,31 +409,42 @@ HOME_CSS = """
 .hp-hero .hp-title { color: #f5f0e8; text-shadow: 0 2px 24px rgba(0,0,0,.45); }
 .hp-hero .hp-lead { color: #e4ddd1; text-shadow: 0 1px 12px rgba(0,0,0,.5); }
 .hp-hero .hp-cta .btn.hp-ghost { color: #f5f0e8; border-color: rgba(245,240,232,.7); background: rgba(18,15,12,.25); }
-@media (min-width: 900px) {
-  .hp-hero { min-height: min(84vh, 760px); }
-  .hp-hero::after { background: linear-gradient(to right, rgba(18,15,12,.92) 0%, rgba(18,15,12,.62) 40%, rgba(18,15,12,.08) 75%); }
-  .hp-hero .hp-wrap { padding-bottom: 90px; }
-}
-@media (max-width: 699px) {
+/* landscape hero */
+.hp-wrap { max-width: 720px; margin-left: auto; margin-right: auto; }
+.hp-hero .hp-wrap { max-width: 1180px; padding-left: 32px; padding-right: 32px; }
+@media all {
+  .hp-hero { --vw: min(1vw, 7px); }
   /* the image sets the height; a dark band above it (--hero-extra) holds the text, and the photo fades into it.
-     If your image has the logo/cart baked into its top edge, set --hero-crop to that height (about 11vw). */
-  .hp-hero { --hero-crop: 0px; --hero-extra: 22vw; display: block; min-height: 0; padding: 0; background: var(--ink); }
+     If your image has the logo/cart baked into its top edge, set --hero-crop to that height (about calc(11 * var(--vw))). */
+  .hp-hero { --hero-crop: 0px; --hero-extra: calc(22 * var(--vw)); display: block; min-height: 0; padding: 0; background: var(--ink); }
   .hp-hero::after { display: none; }
   .hp-hero-bg { position: relative; inset: auto; z-index: 0; overflow: hidden; margin-top: var(--hero-extra); }
   .hp-hero-bg img { display: block; width: 100%; height: auto; margin-top: calc(var(--hero-crop) * -1); }
   .hp-hero-bg::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(to bottom, var(--ink) 0, rgba(33,30,26,.72) 12vw, rgba(33,30,26,0) 34vw); }
-  .hp-hero .hp-wrap { position: absolute; top: 0; left: 0; right: 0; z-index: 1; padding: 5vw 18px 0; text-align: center; }
+    background: linear-gradient(to bottom, var(--ink) 0, rgba(33,30,26,.72) calc(12 * var(--vw)), rgba(33,30,26,0) calc(34 * var(--vw))); }
+  .hp-hero .hp-wrap { position: absolute; top: 0; left: 0; right: 0; z-index: 1; padding: calc(5 * var(--vw)) 18px 0; text-align: center; }
   .hp-hero-copy { margin: 0 auto; max-width: none; }
-  .hp-eyebrow { justify-content: center; gap: 2.6vw; font-size: max(10.5px, 2.8vw); letter-spacing: 0.2em; margin: 0 0 1.6vw; }
-  .hp-eyebrow::before, .hp-eyebrow::after { content: ""; flex: 1 1 0; max-width: 20vw; height: 1px; background: var(--gold); }
-  .hp-hero .hp-title { font-size: 14vw; line-height: 0.9; margin: 0 0 2.6vw; white-space: nowrap; }
-  .hp-hero .hp-lead { font-size: max(12.5px, 3.3vw); line-height: 1.45; max-width: 66vw; margin: 0 auto 3.4vw; letter-spacing: 0.02em; }
-  .hp-hero .hp-cta { flex-direction: column; align-items: center; gap: 2vw; }
-  .hp-hero .hp-cta .btn { width: 56vw; min-width: 0; padding: 0; height: max(38px, 10vw); line-height: max(38px, 10vw);
-    font-size: max(12px, 3.2vw); text-align: center; }
+  .hp-eyebrow { justify-content: center; gap: calc(2.6 * var(--vw)); font-size: max(10.5px, calc(2.8 * var(--vw))); letter-spacing: 0.2em; margin: 0 0 calc(1.6 * var(--vw)); }
+  .hp-eyebrow::before, .hp-eyebrow::after { content: ""; flex: 1 1 0; max-width: calc(20 * var(--vw)); height: 1px; background: var(--gold); }
+  .hp-hero .hp-title { font-size: calc(14 * var(--vw)); line-height: 0.9; margin: 0 0 calc(2.6 * var(--vw)); white-space: nowrap; }
+  .hp-hero .hp-lead { font-size: max(12.5px, calc(3.3 * var(--vw))); line-height: 1.45; max-width: calc(66 * var(--vw)); margin: 0 auto calc(3.4 * var(--vw)); letter-spacing: 0.02em; }
+  .hp-hero .hp-cta { flex-direction: column; align-items: center; gap: calc(2 * var(--vw)); }
+  .hp-hero .hp-cta .btn { width: calc(56 * var(--vw)); min-width: 0; padding: 0; height: max(38px, calc(10 * var(--vw))); line-height: max(38px, calc(10 * var(--vw)));
+    font-size: max(12px, calc(3.2 * var(--vw))); text-align: center; }
+}
+/* wide hero (switched off: desktop uses the mobile layout) */
+@media (min-width: 700px) and (max-width: 699px) {
+  .hp-hero { --vw: min(0.38vw, 6px); }
+  .hp-hero-bg { margin-top: 0; }
+  .hp-hero-bg::after { background: linear-gradient(to bottom, var(--ink) 0, rgba(33,30,26,.6) 8%, rgba(33,30,26,0) 28%); }
 }
 
+
+/* desktop: mobile layout (text band on top, photo below), full width */
+@media (min-width: 700px) {
+  .hp-hero { --vw: 7px; --hero-extra: calc(48 * var(--vw)); }
+  .hp-hero .hp-wrap { margin-left: auto; margin-right: auto; }
+}
 /* ticker */
 .hp-marquee { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; background: var(--ink-raised); }
 .hp-marquee-track { display: flex; width: max-content; animation: hp-scroll 32s linear infinite; }
@@ -536,24 +546,6 @@ HOME_CSS = """
 .hp-close-actions .btn.hp-ghost { background: transparent; color: var(--paper); border: 1px solid var(--paper-dim); }
 .hp-close-actions .btn.hp-ghost:hover { background: transparent; border-color: var(--gold); color: var(--gold); }
 
-@media (min-width: 900px) {
-  .hp-wrap { max-width: var(--max-wide); padding: 0 32px; }
-  .hp-lead { font-size: 17px; }
-  .hp-section { padding-top: 84px; }
-  .hp-h2 { font-size: 50px; }
-  .hp-cats { gap: 20px; margin: 0 -32px; padding: 0 32px 4px; scroll-padding-left: 32px; }
-  .hp-cats .hp-cat { flex-basis: 260px; }
-  .hp-arrows { display: flex; }
-  .hp-products { grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  .hp-band { margin-top: 90px; padding: 80px 0 84px; }
-  .hp-values { grid-template-columns: repeat(3, 1fr); gap: 44px; }
-  .hp-trust { grid-template-columns: repeat(3, 1fr); margin-top: 80px; }
-  .hp-trust > div { border-bottom: none; border-right: 1px solid var(--line); padding: 26px 24px; }
-  .hp-trust > div:last-child { border-right: none; }
-  .hp-close { margin-top: 80px; padding: 88px 40px 76px; }
-  .hp-close-actions { flex-direction: row; justify-content: center; gap: 14px; }
-  .hp-close-actions .btn { width: auto; max-width: none; min-width: 230px; }
-}
 @media (prefers-reduced-motion: reduce) {
   .hp-rise, .hp-marquee-track { animation: none; }
 }
@@ -587,10 +579,6 @@ HOME_CSS = """
 }
 .hp-cat:hover .hp-cat-label span:last-child { background: var(--gold); color: var(--ink); }
 .hp-arrows { display: none !important; }
-@media (min-width: 900px) {
-  .hp-cats { grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 0; padding: 0; }
-  .hp-cat-label { font-size: 24px; padding: 22px 20px 18px; }
-}
 
 /* ---- Trust strip ---- */
 .hp-trust { display: grid; gap: 0; margin-top: 56px; border: none;
@@ -607,16 +595,6 @@ HOME_CSS = """
 .hp-trust strong { display: block; margin: 0 0 2px; font-family: "Big Shoulders Display", sans-serif; font-weight: 700;
   font-size: 19px; letter-spacing: .06em; text-transform: uppercase; color: var(--paper); }
 .hp-trust p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--paper-dim); }
-@media (min-width: 900px) {
-  .hp-trust { grid-template-columns: repeat(3, 1fr); margin-top: 80px; }
-  .hp-trust > div,
-  .hp-trust > div:last-child { padding: 28px 30px; border-bottom: none; border-right: 1px solid var(--line); column-gap: 16px; }
-  .hp-trust > div:last-child { border-right: none; }
-  .hp-trust-icon { width: 32px; height: 32px; }
-  .hp-trust-icon svg { width: 30px; height: 30px; }
-  .hp-trust strong { font-size: 22px; }
-  .hp-trust p { font-size: 13.5px; }
-}
 
 /* ---- The Sets Edit ---- */
 .hp-sets { margin-top: 64px; padding: 44px 0 48px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
@@ -643,18 +621,6 @@ HOME_CSS = """
 .hp-set-img:hover img { transform: scale(1.05); }
 .hp-set-name { margin-top: 10px; font-size: 20px; letter-spacing: .08em; text-transform: uppercase; color: var(--paper); }
 .hp-set-name:hover { color: var(--gold); }
-@media (min-width: 900px) {
-  .hp-sets { padding: 64px 0; margin-top: 90px; }
-  .hp-sets-grid { grid-template-columns: .85fr 1.7fr; gap: 56px; }
-  .hp-sets-copy { text-align: left; }
-  .hp-sets-kicker { justify-content: flex-start; }
-  .hp-sets-kicker::after { display: none; }
-  .hp-sets-cols { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; }
-  .hp-set, .hp-set:nth-child(-n+2) { border-top: none; border-left: 1px solid var(--line); padding: 0 16px; }
-  .hp-set:first-child { border-left: none; }
-  .hp-set-img { max-width: 190px; }
-  .hp-set-name { font-size: 22px; }
-}
 /* sets heading: elegant serif, two lines */
 .hp-sets .hp-sets-title {
   font-family: "Playfair Display", Georgia, "Times New Roman", serif; font-weight: 600; text-transform: none;
@@ -662,9 +628,6 @@ HOME_CSS = """
   font-size: clamp(30px, 8.6vw, 46px);
 }
 .hp-sets .hp-sets-title em { font-style: italic; font-weight: 500; color: var(--gold); }
-@media (min-width: 900px) {
-  .hp-sets .hp-sets-title { font-size: clamp(36px, 3.4vw, 52px); }
-}
 
 /* category tiles: the photo box is sized explicitly so it sits ABOVE the label strip,
    and the garment is centered inside that box (see hpPlace in HOME_JS) */
@@ -673,9 +636,6 @@ HOME_CSS = """
   position: absolute !important; left: 16px !important; top: 16px !important;
   width: calc(100% - 32px) !important; height: calc(100% - 84px) !important;
   object-fit: contain !important; object-position: center !important;
-}
-@media (min-width: 900px) {
-  .hp-cats .hp-cat-img img { height: calc(100% - 100px) !important; }
 }
 
 /* ---- Why Loomex (playful band) ---- */
@@ -705,17 +665,6 @@ HOME_CSS = """
 .hp-why-card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--paper-dim); }
 .hp-why-sticker { display: none; }
 @keyframes hp-wobble { from { rotate: 9deg; } to { rotate: 17deg; } }
-@media (min-width: 560px) { .hp-why-grid { grid-template-columns: 1fr 1fr; gap: 28px; } }
-@media (min-width: 900px) {
-  .hp-why { padding: 96px 0 104px; }
-  .hp-why-grid { grid-template-columns: repeat(4, 1fr); gap: 26px; }
-  .hp-why-lead { font-size: 17px; margin-bottom: 52px; }
-  .hp-why-sticker { display: flex; align-items: center; justify-content: center; text-align: center; position: absolute;
-    top: -8px; right: 8px; width: 112px; height: 112px; border-radius: 50%; background: var(--gold); color: var(--ink);
-    border: 2px solid var(--ink); font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: 20px;
-    line-height: 1; letter-spacing: .04em; text-transform: uppercase; padding: 10px; box-sizing: border-box;
-    animation: hp-wobble 3.6s ease-in-out infinite alternate; }
-}
 @media (prefers-reduced-motion: reduce) { .hp-why-sticker { animation: none; } .hp-why-card { transition: none; } }
 </style>
 """
@@ -883,7 +832,7 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
     real = [(p, u) for p, u in with_img if "placehold.co" not in u]
     pool = real or with_img  # prefer real photos, placeholders only if that's all there is
     # hero banner
-    HERO_BANNER = "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/product_images/hero%20section/banner%20img.jpeg"
+    HERO_BANNER = "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/product_images/hero%20section/banner%20landscape.jpg"
     HERO_BANNER_MOBILE = "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/product_images/hero%20section/banner%20image%20portrait.jpeg"
 
     # ticker
@@ -1048,8 +997,6 @@ SHOP_CSS = """
   text-transform:uppercase;letter-spacing:.06em;color:var(--paper-dim);}
 .subtab + .subtab{border-left:1px solid var(--line);}
 .subtab.active{color:var(--gold);background:none;box-shadow:inset 0 -2px 0 var(--gold);}
-@media (min-width:560px){.subtabs{justify-content:center;}}
-@media (min-width:900px){.subtabs{padding-left:32px;padding-right:32px;}}
 </style>
 <script>
 function cardShowColor(el, ci){
@@ -1556,7 +1503,6 @@ CHECKOUT_CSS = """
 .review-row.total span:last-child { color: var(--gold); font-weight: 700; }
 .review-actions { display: grid; gap: 10px; margin-top: 18px; }
 .review-actions .btn { width: 100%; }
-@media (min-width: 560px) { .review-backdrop { align-items: center; padding: 18px; } }
 </style>
 """
 
@@ -2270,7 +2216,6 @@ RETURNS_CSS = """
 }
 .rt-handle { text-align: center; color: var(--paper-dim); font-size: 12px; margin: 12px 0 0 !important; }
 
-@media (min-width: 560px) { .rt-title { font-size: 52px; } }
 </style>
 """
 

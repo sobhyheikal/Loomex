@@ -50,3 +50,12 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
                               status_code=exc.status_code, message=message),
         status_code=exc.status_code,
     )
+
+# serve the site icon at the address browsers ask for by default
+from fastapi.responses import FileResponse as _FileResponse  # noqa: E402
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def _favicon():
+    return _FileResponse("static/loomex-icon-v5.png", media_type="image/png",
+                         headers={"Cache-Control": "no-cache"})

@@ -317,7 +317,7 @@ def admin_page(title: str, body: str, active: str = "", msg: str | None = None) 
 <link rel="manifest" href="/admin/manifest.webmanifest"><meta name="theme-color" content="#201c18">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="LX Admin">
 <link rel="apple-touch-icon" href="/static/admin-icon.png">
-{FONTS}<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">{ADMIN_CSS}</head>
+{FONTS}<link rel="icon" type="image/png" href="/static/loomex-icon-v5.png"><link rel="apple-touch-icon" href="/static/loomex-icon-v5.png">{ADMIN_CSS}</head>
 <body>
 <input type="checkbox" id="am" class="am-toggle">
 <label for="am" class="am-backdrop"></label>
@@ -431,7 +431,7 @@ def login_page(configured: bool = True, error: str | None = None, first_time: bo
 <button class="btn lg-btn">Log in</button></form></div>"""
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex, nofollow">
-<title>Admin login · Loomex</title>{FONTS}<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">{ADMIN_CSS}{_LOGIN_CSS}</head>
+<title>Admin login · Loomex</title>{FONTS}<link rel="icon" type="image/png" href="/static/loomex-icon-v5.png"><link rel="apple-touch-icon" href="/static/loomex-icon-v5.png">{ADMIN_CSS}{_LOGIN_CSS}</head>
 <body><div class="lg"><div class="lg-in">
 <div class="lg-brand"><div class="lg-logo">LOOM<span>EX</span></div><div class="lg-rule"></div><p class="lg-tag">Admin panel</p></div>
 {inner}
