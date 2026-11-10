@@ -493,3 +493,66 @@ def list_deleted() -> dict:
                           "deleted_at": r["deleted_at"], "days_left": left})
         out[kind] = items
     return out
+
+
+def dashboard_data() -> dict:
+    """Numbers for the admin Home page. Cancelled orders never count towards sales."""
+    from datetime import timedelta
+    now = _now().astimezone(ADMIN_TZ)
+    today = now.date()
+    try:
+        orders = (supabase.table("orders").select("*").is_("deleted_at", "null")
+                  .order("created_at", desc=True).limit(1000).execute().data or [])
+    except Exception:
+        orders = []
+
+    def state(o):
+        s = str(o.get("status") or "").lower()
+        if "cancel" in s:
+            return "cancelled"
+        if "complete" in s or "deliver" in s:
+            return "done"
+        return "open"
+
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    by_day = {d: 0.0 for d in days}
+    today_sales = month_sales = 0.0
+    today_orders = month_orders = open_orders = 0
+    for o in orders:
+        st = state(o)
+        if st == "open":
+            open_orders += 1
+        if st == "cancelled":
+            continue
+        when = promo_svc._parse(o.get("created_at"))
+        if not when:
+            continue
+        day = when.astimezone(ADMIN_TZ).date()
+        total = float(o.get("total") or 0)
+        if day == today:
+            today_sales += total
+            today_orders += 1
+        if 0 <= (today - day).days < 30:
+            month_sales += total
+            month_orders += 1
+        if day in by_day:
+            by_day[day] += total
+
+    try:
+        prods = (supabase.table("products").select("id,in_stock,is_visible")
+                 .is_("deleted_at", "null").execute().data or [])
+    except Exception:
+        prods = []
+    visible = [p for p in prods if p.get("is_visible") is not False]
+    return {
+        "hour": now.hour,
+        "weekday": now.strftime("%A %d %B"),
+        "today_sales": today_sales, "today_orders": today_orders,
+        "month_sales": month_sales, "month_orders": month_orders,
+        "open_orders": open_orders,
+        "week": [{"label": d.strftime("%a"), "sales": by_day[d], "today": d == today} for d in days],
+        "recent": orders[:5],
+        "visible_products": len(visible),
+        "sold_out": sum(1 for p in visible if p.get("in_stock") is False),
+        "live_promos": len(promo_svc.get_live_promotions()),
+    }

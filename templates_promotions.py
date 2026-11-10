@@ -191,12 +191,14 @@ def _card(p: dict, names: dict) -> str:
     type_label = next((t[1] for t in DISCOUNT_TYPES if t[0] == p.get("discount_type")), "Banner only")
     ids = [str(i) for i in (p.get("product_ids") or [])]
     shown = [names[i] for i in ids if i in names]
+    if names and len(shown) >= len(names):
+        shown = []  # covers every product: show 'All products' instead of the list
     if shown:
         chips = "".join(f'<span class="pm-chip">{escape(n)}</span>' for n in shown[:3])
         if len(shown) > 3:
             chips += f'<span class="pm-chip more">+{len(shown) - 3} more</span>'
     else:
-        chips = '<span class="pm-chip">All products</span>'
+        chips = '<span class="pm-chip all">All products</span>'
     dates = " → ".join(x for x in [
         _dt(p.get("starts_at")).split(",")[0] if p.get("starts_at") else "",
         _dt(p.get("ends_at")).split(",")[0] if p.get("ends_at") else ""] if x)
@@ -205,7 +207,7 @@ def _card(p: dict, names: dict) -> str:
     on_banner = p.get("show_banner") is not False
     banner = "On homepage banner" if on_banner else "Not on homepage banner"
     pid = p["id"]
-    return f"""<div class="pc"><div class="pc-band"><span class="k">{escape(type_label)}</span><span class="badge {badge[1]}">{badge[0]}</span></div>
+    return f"""<div class="pc st-{state}"><div class="pc-band"><span class="k">{escape(type_label)}</span><span class="badge {badge[1]}">{badge[0]}</span></div>
 <div class="pc-body"><p class="t" style="font-size:17px">{escape(p['message'])}</p>{sub}
 <div class="pm-chips"><span class="k2">Applies to</span>{chips}</div>
 <p class="pm-line"><b>{escape(describe(p))}</b></p>{code}

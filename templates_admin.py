@@ -9,7 +9,7 @@ from services.admin_data import ADMIN_TZ, ORDER_STATUSES, ORDER_VIEWS, PAYMENT_S
 from services.promotions import _parse, promo_state
 from templates import FONTS
 
-NAV = [("orders", "Orders"), ("products", "Products"), ("customers", "Customers"),
+NAV = [("home", "Home"), ("orders", "Orders"), ("products", "Products"), ("customers", "Customers"),
        ("promotions", "Promotions"), ("profile", "Profile")]
 
 ADMIN_CSS = """
@@ -108,6 +108,44 @@ details.order[open] summary{border-bottom:1px solid var(--line);}
 .pc-body{padding:14px;}
 .pc-foot{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line);}
 .pc-foot form{margin:0;}
+/* promotions page look */
+.pc{border-radius:16px;overflow:hidden;margin-bottom:14px;border-left:4px solid var(--c,var(--paper-dim));box-shadow:0 8px 22px rgba(0,0,0,.22);}
+.pc.st-live{--c:var(--gold);}
+.pc.st-scheduled{--c:#6f9a95;}
+.pc.st-ended,.pc.st-off{--c:var(--paper-dim);}
+.pc-band{padding:11px 16px;background:linear-gradient(90deg,rgba(241,236,226,.07),rgba(241,236,226,.02));}
+.pc.st-live .pc-band{background:linear-gradient(90deg,rgba(199,154,70,.20),rgba(199,154,70,.04));}
+.pc.st-scheduled .pc-band{background:linear-gradient(90deg,rgba(111,154,149,.22),rgba(111,154,149,.05));}
+.pc-band .k{color:var(--c);letter-spacing:.2em;}
+.pc .pc-band .badge{border-color:var(--c);color:var(--c);font-weight:600;}
+.pc.st-live .pc-band .badge{background:var(--gold);color:var(--ink);}
+.pc-body{padding:16px;}
+.pc-body>.t{font-family:"Big Shoulders Display",sans-serif;font-size:27px!important;letter-spacing:.03em;text-transform:uppercase;line-height:1.05;margin:0 0 4px;}
+.pc.st-ended .pc-body>.t,.pc.st-off .pc-body>.t{color:var(--paper-dim);}
+.pc-body .pm-chips+.pm-line{margin:12px 0 6px;}
+.pc-body .pm-chips+.pm-line b{display:inline-block;padding:6px 14px;border-radius:999px;border:1px solid var(--gold-dim);background:rgba(199,154,70,.14);color:var(--gold);font-size:14px;}
+.pc-foot{flex-wrap:wrap;gap:8px 10px;padding:12px 16px;background:rgba(0,0,0,.12);}
+.pc-foot .btn.sm{border-radius:999px;padding:8px 14px;}
+.pc-foot .pm-del{margin-left:auto;}
+.pc-foot .link{color:#b86a6a;}
+/* promotion form look */
+.pm-chip.all{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700;}
+#pm-form .sect{border-radius:18px;overflow:hidden;margin-bottom:16px;border:1px solid var(--line);box-shadow:0 10px 26px rgba(0,0,0,.24);}
+#pm-form .sect-h{padding:14px 18px;background:linear-gradient(90deg,rgba(199,154,70,.20),rgba(199,154,70,.03));}
+#pm-form .sect-h b{width:30px;height:30px;font-size:14px;background:linear-gradient(135deg,#e6c27a,var(--gold) 60%,var(--gold-dim));box-shadow:0 4px 10px rgba(199,154,70,.3);}
+#pm-form .sect-h h2{font-size:23px;letter-spacing:.06em;}
+#pm-form .sect-b{padding:18px;}
+#pm-form input[type=text],#pm-form input[type=number],#pm-form input[type=date],#pm-form select{box-sizing:border-box;max-width:100%;border-radius:14px;padding:14px 16px;background:var(--ink);border:1px solid rgba(241,236,226,.12);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);transition:border-color .15s,box-shadow .15s;}
+#pm-form input[type=date]{min-height:50px;-webkit-appearance:none;appearance:none;}
+#pm-form input:focus,#pm-form select:focus{border-color:var(--gold);box-shadow:inset 0 2px 6px rgba(0,0,0,.25),0 0 0 3px rgba(199,154,70,.22);}
+#pm-form .two>.fg{min-width:0;}
+#pm-form .pm-pick{border-radius:16px;padding:12px;background:rgba(0,0,0,.18);}
+#pm-form .pm-prod,#pm-form .pm-type{border-radius:14px;padding:13px 14px;background:var(--ink);transition:border-color .15s,background .15s;}
+#pm-form .pm-prod:has(input:checked),#pm-form .pm-type:has(input:checked){background:linear-gradient(90deg,rgba(199,154,70,.18),rgba(199,154,70,.04)),var(--ink);border-color:var(--gold);box-shadow:0 0 0 1px rgba(199,154,70,.3);}
+#pm-form .pm-count{background:rgba(199,154,70,.12);border-color:var(--gold-dim);color:var(--gold);font-weight:600;}
+#pm-form .btn.sm{border-radius:999px;padding:10px 18px;}
+#pm-form .pm-tog{border-radius:16px;}
+#pm-form > button.btn{display:block;width:100%;border:0;border-radius:999px;padding:17px 18px;font-size:13px;letter-spacing:.16em;color:var(--ink);background:linear-gradient(135deg,#e6c27a,var(--gold) 55%,var(--gold-dim));box-shadow:0 10px 26px rgba(199,154,70,.32);}
 details.newp>summary{list-style:none;display:inline-block;margin-bottom:14px;}
 details.newp>summary::-webkit-details-marker{display:none;}
 .cl{background:var(--ink);border:1px solid var(--line);padding:12px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;}
@@ -122,6 +160,36 @@ details.newp>summary::-webkit-details-marker{display:none;}
 .cl-url span{flex:0 0 46px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-dim);}
 .cl-url input{flex:1;min-width:0;}
 details.order .ob{gap:12px;}
+details.order{--c:var(--paper-dim);border-left:3px solid var(--c);}
+details.order.st-new,details.order.st-confirmed,details.order.st-shipped{--c:#6f9a95;}
+details.order.st-delivered{--c:var(--gold);}
+details.order.st-cancelled{--c:#b86a6a;}
+details.order summary{align-items:center;gap:14px;padding:14px 16px;}
+details.order .t{font-size:15px;}
+.oside{display:flex;flex-direction:column;align-items:flex-end;gap:7px;}
+.obadges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.ototal{font-size:16px;white-space:nowrap;}
+.badge.st-new,.badge.st-confirmed,.badge.st-shipped{border-color:#6f9a95;color:#6f9a95;background:rgba(111,154,149,.14);}
+.badge.st-delivered{border-color:var(--gold);color:var(--gold);background:rgba(199,154,70,.12);}
+.badge.st-cancelled{border-color:#b86a6a;color:#b86a6a;background:rgba(184,106,106,.14);}
+.badge.promo{border-color:var(--gold);background:var(--gold);color:var(--ink);font-weight:600;}
+details.order summary{display:block;padding:14px 16px;}
+.oh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+.on{font-size:16px;font-weight:700;letter-spacing:.01em;}
+.oc{margin:6px 0 0;font-size:14px;color:var(--paper);word-break:break-word;}
+.om{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 10px;margin-top:8px;}
+.om .obadges{margin-left:auto;flex:0 0 auto;}
+details.order{border-radius:12px;overflow:hidden;margin-bottom:12px;border-left-width:4px;}
+details.order summary{display:block;padding:0;}
+.oband{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:rgba(241,236,226,.05);border-bottom:1px solid var(--line);}
+.oband .on{font-size:13px;letter-spacing:.12em;font-weight:700;color:var(--c);}
+.obody{padding:14px 14px 4px;}
+.obody .oc{margin:0 0 4px;font-size:17px;font-weight:600;}
+.ofoot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px 14px;}
+.ofoot .ototal{font-size:21px;font-weight:700;}
+.ofoot .s{font-size:12px;}
+details.order.st-history .oc,details.order.st-history .ototal{color:var(--paper-dim);}
+.badge.st-history{background:rgba(185,178,164,.10);}
 .op{border:1px solid var(--line);background:var(--ink);padding:14px;margin:0;}
 .op h3 small{color:var(--paper-dim);font-weight:500;margin-left:6px;}
 .kv{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px;}
@@ -160,6 +228,47 @@ details.order .ob{gap:12px;}
 .cl.sold .cl-n{color:var(--gold);}
 .cl.sold .cl-oos{color:var(--gold);}
 .cl.sold .cl-top input{text-decoration:line-through;color:var(--paper-dim);}
+/* product edit page look v2 */
+#product-form{padding-bottom:10px;}
+#product-form .card{position:relative;border-radius:20px;padding:22px 18px 20px;margin-bottom:20px;border:1px solid var(--line);border-top:0;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.28);background:linear-gradient(90deg,var(--gold),#e6c27a 50%,var(--gold-dim)) top/100% 4px no-repeat,radial-gradient(120% 60% at 0% 0%,rgba(199,154,70,.12),rgba(199,154,70,0) 60%),var(--ink-raised);}
+#product-form > .card::before{display:block;font-family:"Big Shoulders Display",sans-serif;font-size:26px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--paper);margin:4px 0 20px;padding:2px 0 2px 12px;border-left:4px solid var(--gold);}
+#product-form > .card:nth-of-type(1)::before{content:"01 · The basics";}
+#product-form > .card:nth-of-type(2)::before{content:"02 · Photos & colors";}
+#product-form label.f{font-size:10.5px;letter-spacing:.18em;font-weight:600;margin-bottom:8px;}
+#product-form input[type=text],#product-form input[type=number],#product-form select,#product-form textarea{border-radius:14px;padding:14px 16px;background:var(--ink);border:1px solid rgba(241,236,226,.12);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);transition:border-color .15s,box-shadow .15s;}
+#product-form input:focus,#product-form select:focus,#product-form textarea:focus{border-color:var(--gold);box-shadow:inset 0 2px 6px rgba(0,0,0,.25),0 0 0 3px rgba(199,154,70,.22);}
+#product-form input[readonly]{opacity:.6;border-style:dashed;}
+#product-form input[name=price]{font-weight:700;font-size:17px;color:var(--gold);}
+#product-form .hint{font-size:12px;line-height:1.55;}
+#product-form .sz{gap:10px;}
+#product-form .sz-row{border-radius:14px;padding:12px 14px;transition:border-color .15s,background .15s;}
+#product-form .sz-row:has(.sz-on:checked){border-color:var(--gold-dim);background:linear-gradient(90deg,rgba(199,154,70,.13),rgba(199,154,70,0) 70%),var(--ink);}
+#product-form .sz-name{font-family:"Big Shoulders Display",sans-serif;font-size:21px;letter-spacing:.06em;}
+#product-form .sz-add{margin-top:12px;}
+#product-form .btn.sm{border-radius:999px;padding:10px 18px;}
+#product-form .check{gap:14px;padding:14px 16px;border-radius:14px;background:var(--ink);border:1px solid var(--line);font-weight:600;}
+#product-form .check input{-webkit-appearance:none;appearance:none;width:46px;height:26px;border-radius:999px;background:rgba(241,236,226,.14);position:relative;flex:0 0 auto;margin:0;cursor:pointer;transition:background .2s;}
+#product-form .check input::before{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--paper);transition:transform .2s,background .2s;}
+#product-form .check input:checked{background:var(--gold);}
+#product-form .check input:checked::before{transform:translateX(20px);background:var(--ink);}
+#product-form .cl{border-radius:18px;padding:16px;margin-bottom:14px;background:var(--ink);border:1px solid var(--line);border-left:4px solid var(--gold);box-shadow:0 6px 16px rgba(0,0,0,.2);}
+#product-form .cl.sold{border-left-color:#b86a6a;}
+#product-form .cl-n{justify-self:start;padding:3px 11px;border-radius:999px;background:rgba(199,154,70,.16);letter-spacing:.18em;}
+#product-form .cl .thumb{border-radius:12px;overflow:hidden;border:1px solid var(--line);}
+#product-form .cl-pic{border-radius:12px;overflow:hidden;transition:transform .15s,border-color .15s;}
+#product-form .cl-pic:hover{transform:translateY(-2px);border-color:var(--gold-dim);}
+#product-form .cl-padd{border-radius:12px;background:rgba(199,154,70,.05);transition:background .15s;}
+#product-form .cl-padd:hover{background:rgba(199,154,70,.14);}
+#product-form button.btn:not(.sm){display:block;width:100%;border:0;border-radius:999px;padding:17px 18px;font-size:13px;letter-spacing:.16em;color:var(--ink);background:linear-gradient(135deg,#e6c27a,var(--gold) 55%,var(--gold-dim));box-shadow:0 10px 26px rgba(199,154,70,.32);}
+/* end product edit page look v2 */
+/* customers page look */
+.row.cust{display:grid;grid-template-columns:50px 1fr auto;grid-template-areas:"av info info" "stats stats btn";gap:12px 14px;align-items:center;padding:16px;border-radius:16px;border-left:4px solid var(--gold);margin-bottom:12px;box-shadow:0 8px 22px rgba(0,0,0,.22);background:linear-gradient(90deg,rgba(199,154,70,.08),rgba(199,154,70,0) 55%),var(--ink-raised);}
+.row.cust::before{content:attr(data-i);grid-area:av;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"Big Shoulders Display",sans-serif;font-size:26px;font-weight:700;color:var(--ink);background:linear-gradient(135deg,#e6c27a,var(--gold) 60%,var(--gold-dim));}
+.row.cust>.grow{grid-area:info;min-width:0;}
+.row.cust .t{font-size:17px;margin:0 0 3px;}
+.row.cust>.s{grid-area:stats;line-height:1.55;}
+.row.cust>.s::first-line{color:var(--gold);font-weight:700;font-size:15px;}
+.row.cust>a.btn{grid-area:btn;border-radius:999px;padding:9px 16px;}
 .swf{display:flex;align-items:center;gap:8px;margin:0 0 0 auto;}
 .sw-l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim);min-width:68px;}
 .sw{position:relative;width:46px;height:26px;border-radius:999px;border:1px solid var(--line);background:rgba(241,236,226,.12);cursor:pointer;padding:0;transition:background .15s;}
@@ -207,7 +316,7 @@ def admin_page(title: str, body: str, active: str = "", msg: str | None = None) 
 <meta name="robots" content="noindex, nofollow"><title>{escape(title)} · Loomex Admin</title>
 <link rel="manifest" href="/admin/manifest.webmanifest"><meta name="theme-color" content="#201c18">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="LX Admin">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="/static/admin-icon.png">
 {FONTS}<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">{ADMIN_CSS}</head>
 <body>
 <input type="checkbox" id="am" class="am-toggle">
@@ -216,7 +325,7 @@ def admin_page(title: str, body: str, active: str = "", msg: str | None = None) 
 <div class="am-out"><form method="post" action="/admin/logout"><button class="dl">Log out</button></form>{trash}</div></nav>
 <header class="top"><div class="top-in">
   <label for="am" class="am-btn" aria-label="Open menu"><span></span><span></span><span></span></label>
-  <a href="/admin/orders" class="logo">LOOM<span>EX</span><small>Admin</small></a>{trash}
+  <a href="/admin/home" class="logo">LOOM<span>EX</span><small>Admin</small></a>{trash}
 </div></header>
 <main class="page">{flash}{body}</main>
 {LIVE_SEARCH_JS}{FLASH_JS if msg else ""}
@@ -260,22 +369,74 @@ document.querySelectorAll('input[data-live]').forEach(function (inp) {
 </script>"""
 
 
+_LOGIN_CSS = """<style>
+.lg{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 18px;position:relative;overflow:hidden;
+  background:repeating-linear-gradient(45deg,rgba(199,154,70,.05) 0 1px,transparent 1px 9px),
+  radial-gradient(520px 320px at 50% 28%,rgba(199,154,70,.16),transparent 70%),var(--ink);}
+.lg-in{width:100%;max-width:380px;position:relative;}
+.lg-brand{text-align:center;margin-bottom:28px;}
+.lg-logo{font-family:"Big Shoulders Display",sans-serif;font-weight:700;font-size:56px;letter-spacing:.14em;line-height:1;}
+.lg-logo span{color:var(--gold);}
+.lg-rule{width:46px;height:3px;background:var(--gold);margin:16px auto 13px;}
+.lg-tag{margin:0;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--paper-dim);}
+.lg-card{position:relative;padding:28px 22px 22px;border:1px solid var(--line);
+  background:linear-gradient(135deg,rgba(199,154,70,.10),rgba(199,154,70,.02) 60%),var(--ink-raised);
+  box-shadow:0 18px 40px rgba(0,0,0,.35);}
+.lg-card::before{content:"";position:absolute;inset:6px;border:1px dashed rgba(199,154,70,.32);pointer-events:none;}
+.lg-card>*{position:relative;}
+label.f.lg-label{display:flex;align-items:center;gap:8px;}
+.lg-label svg{width:14px;height:14px;color:var(--gold);flex:0 0 auto;}
+.lg-pw{position:relative;}
+.lg-pw input{padding:14px 74px 14px 14px;font-size:16px;}
+.lg-t{position:absolute;right:0;top:0;bottom:0;padding:0 14px;background:none;border:none;color:var(--paper-dim);
+  font:600 11px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;}
+.lg-t:hover{color:var(--gold);}
+.lg-btn{width:100%;padding:15px 16px;font-size:13px;margin-top:6px;}
+.lg-hint{margin:0 0 16px;padding:10px 12px;border-left:3px solid var(--gold);background:rgba(199,154,70,.08);
+  font-size:12.5px;line-height:1.5;color:var(--paper-dim);}
+.lg-foot{margin-top:24px;text-align:center;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--paper-dim);opacity:.7;}
+</style>"""
+
+_LOGIN_JS = """<script>
+(function(){
+  var t=document.querySelector('.lg-t'), i=document.getElementById('pw');
+  if(!t||!i)return;
+  t.addEventListener('click',function(){
+    var show=i.type==='password';
+    i.type=show?'text':'password';
+    t.textContent=show?'Hide':'Show';
+    i.focus();
+  });
+})();
+</script>"""
+
+_LOCK = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
+         'stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>')
+
+
 def login_page(configured: bool = True, error: str | None = None, first_time: bool = False) -> str:
     if not configured:
-        inner = ('<div class="card"><p class="s">Admin login isn\'t set up yet. Add <b>ADMIN_PASSWORD</b> and '
+        inner = ('<div class="lg-card"><p class="s">Admin login isn\'t set up yet. Add <b>ADMIN_PASSWORD</b> and '
                  '<b>ADMIN_SECRET</b> to your .env file (and to Vercel) and restart.</p></div>')
     else:
         err = f'<div class="err"><strong>{escape(error)}</strong></div>' if error else ""
-        note = ('<p class="hint" style="margin:0 0 14px">First time? Use the password from '
-                'your .env file, then set your own password in Profile.</p>' if first_time else "")
-        inner = f"""<div class="card"><form method="post" action="/admin/login">{err}{note}
-<div class="fg"><label class="f" for="pw">Password</label><input type="password" id="pw" name="password" autocomplete="current-password" autofocus required></div>
-<button class="btn" style="width:100%">Log in</button></form></div>"""
+        note = ('<p class="lg-hint">First time? Use the password from your .env file, '
+                'then set your own password in Profile.</p>' if first_time else "")
+        inner = f"""<div class="lg-card"><form method="post" action="/admin/login">{err}{note}
+<div class="fg"><label class="f lg-label" for="pw">{_LOCK}Password</label>
+<div class="lg-pw"><input type="password" id="pw" name="password" autocomplete="current-password" autofocus required>
+<button type="button" class="lg-t">Show</button></div></div>
+<button class="btn lg-btn">Log in</button></form></div>"""
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="robots" content="noindex, nofollow">
-<title>Admin login · Loomex</title>{FONTS}<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">{ADMIN_CSS}</head>
-<body><div class="login"><div class="logo" style="font-size:30px">LOOM<span>EX</span></div>
-<p class="sub" style="margin-top:6px">Admin panel</p>{inner}</div></body></html>"""
+<title>Admin login · Loomex</title>{FONTS}<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">{ADMIN_CSS}{_LOGIN_CSS}</head>
+<body><div class="lg"><div class="lg-in">
+<div class="lg-brand"><div class="lg-logo">LOOM<span>EX</span></div><div class="lg-rule"></div><p class="lg-tag">Admin panel</p></div>
+{inner}
+<p class="lg-foot">Loomex &middot; Owners only</p>
+</div></div>{_LOGIN_JS}</body></html>"""
 
 
 PUSH_CARD = """
@@ -361,18 +522,139 @@ PUSH_CARD = """
 """
 
 
+_PAGES_CSS = """<style>
+.pf-head{display:flex;align-items:center;gap:14px;background:var(--ink-raised);border:1px solid var(--line);
+  border-left:4px solid var(--gold);padding:16px 18px;margin-bottom:14px;}
+.pf-av{width:52px;height:52px;flex:0 0 auto;border-radius:50%;background:var(--gold);color:var(--ink);
+  font-family:"Big Shoulders Display",sans-serif;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.pf-role{margin:0 0 2px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:600;}
+.pf-mail{margin:0;font-size:14px;word-break:break-all;}
+.pf-card{padding:0;overflow:hidden;}
+.pf-card-h{padding:12px 18px;background:rgba(241,236,226,.06);border-bottom:1px solid var(--line);
+  font-family:"Big Shoulders Display",sans-serif;font-size:19px;text-transform:uppercase;letter-spacing:.04em;}
+.pf-card-b{padding:18px;}
+.pw{position:relative;}
+.pw input{padding-right:70px;}
+.pw-t{position:absolute;right:0;top:0;bottom:0;padding:0 14px;background:none;border:none;color:var(--paper-dim);
+  font:600 11px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;}
+.pw-t:hover{color:var(--gold);}
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:9px;}
+.meter i{display:block;height:3px;background:var(--line);}
+.meter.s1 i:nth-child(-n+1),.meter.s2 i:nth-child(-n+2){background:var(--gold-dim);}
+.meter.s3 i:nth-child(-n+3),.meter.s4 i{background:var(--gold);}
+.mt{font-size:12px;color:var(--paper-dim);margin:6px 0 0;min-height:16px;}
+.mt.ok{color:var(--gold);}
+.pf-btn{width:100%;padding:13px 16px;font-size:13px;}
+.pf-note{display:flex;gap:12px;align-items:flex-start;background:var(--ink-raised);border:1px solid var(--line);
+  padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:var(--paper-dim);line-height:1.55;}
+.pf-note svg{width:20px;height:20px;flex:0 0 auto;color:var(--gold);margin-top:1px;}
+.pf-note b{color:var(--paper);font-weight:600;}
+.dl-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}
+.dl-tile{background:var(--ink-raised);border:1px solid var(--line);padding:14px 10px;text-align:center;}
+.dl-tile b{display:block;font-family:"Big Shoulders Display",sans-serif;font-size:32px;line-height:1;margin:8px 0 4px;color:var(--paper);}
+.dl-tile small{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim);}
+.dl-ico{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;
+  background:rgba(199,154,70,.12);color:var(--gold);flex:0 0 auto;}
+.dl-ico svg{width:18px;height:18px;display:block;}
+.dl-sec{display:flex;align-items:center;gap:10px;margin:26px 0 10px;}
+.dl-sec h2{margin:0;font-family:"Big Shoulders Display",sans-serif;font-size:22px;text-transform:uppercase;}
+.dl-sec span{margin-left:auto;font-size:12px;color:var(--paper-dim);}
+.dl-card{background:var(--ink-raised);border:1px solid var(--line);border-left:4px solid var(--gold-dim);padding:14px 16px;margin-bottom:10px;}
+.dl-card.soon{border-left-color:var(--gold);box-shadow:0 0 0 1px rgba(199,154,70,.25) inset;}
+.dl-top{display:flex;align-items:center;gap:12px;}
+.dl-top .grow{flex:1 1 auto;min-width:0;}
+.dl-bar{height:4px;background:var(--line);margin:14px 0 8px;overflow:hidden;border-radius:2px;}
+.dl-bar i{display:block;height:100%;background:var(--gold-dim);border-radius:2px;}
+.dl-card.soon .dl-bar i{background:var(--gold);}
+.dl-when{margin:0 0 12px;font-size:12px;color:var(--paper-dim);}
+.dl-card.soon .dl-when{color:var(--gold);}
+.dl-acts{display:flex;align-items:center;gap:14px;}
+.dl-acts form{margin:0;}
+.dl-empty{text-align:center;padding:46px 20px;background:var(--ink-raised);border:1px dashed var(--line);margin-top:8px;}
+.dl-empty .dl-ico{width:56px;height:56px;margin-bottom:12px;}
+.dl-empty .dl-ico svg{width:26px;height:26px;}
+.dl-empty p{margin:0;font-size:14px;color:var(--paper-dim);}
+.dl-empty b{display:block;font-family:"Big Shoulders Display",sans-serif;font-size:22px;text-transform:uppercase;color:var(--paper);margin-bottom:4px;}
+</style>"""
+
+_PROFILE_JS = """<script>
+(function(){
+  document.querySelectorAll('.pw-t').forEach(function(b){
+    b.addEventListener('click',function(){
+      var i=b.parentNode.querySelector('input'), show=i.type==='password';
+      i.type=show?'text':'password'; b.textContent=show?'Hide':'Show';
+    });
+  });
+  var np=document.getElementById('pf-new'), cf=document.getElementById('pf-conf'),
+      meter=document.getElementById('pf-meter'), st=document.getElementById('pf-strength'),
+      cm=document.getElementById('pf-match');
+  if(!np||!cf)return;
+  var labels=['','Too short','Okay','Good','Strong'];
+  function score(v){
+    if(!v)return 0;
+    if(v.length<8)return 1;
+    var s=2, kinds=[/[a-z]/,/[A-Z]/,/\\d/,/[^A-Za-z0-9]/].filter(function(r){return r.test(v);}).length;
+    if(v.length>=12)s++;
+    if(kinds>=3)s++;
+    return Math.min(s,4);
+  }
+  function upd(){
+    var s=score(np.value);
+    meter.className='meter'+(s?' s'+s:'');
+    st.textContent=labels[s];
+    st.className='mt'+(s>=3?' ok':'');
+    if(!cf.value){cm.textContent='';cm.className='mt';return;}
+    var ok=cf.value===np.value;
+    cm.textContent=ok?'Passwords match':"Passwords don't match";
+    cm.className='mt'+(ok?' ok':'');
+  }
+  np.addEventListener('input',upd);
+  cf.addEventListener('input',upd);
+})();
+</script>"""
+
+_SHIELD = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" '
+           'stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>')
+
+_ICONS = {
+    "products": ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" '
+                 'stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/>'
+                 '<circle cx="7.5" cy="7.5" r="1.2"/></svg>'),
+    "orders": ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" '
+               'stroke-linejoin="round"><path d="M6 7h12l1 13H5L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>'),
+    "promotions": ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" '
+                   'stroke-linejoin="round"><path d="M19 5L5 19"/><circle cx="7" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/></svg>'),
+    "trash": TRASH_ICON,
+}
+
+
 def profile_page(email: str, msg: str | None = None, error: str | None = None, form_email: str = "") -> str:
     err = f'<div class="err"><strong>{escape(error)}</strong></div>' if error else ""
-    body = f"""<div class="head"><div><h1>Profile</h1>
-<p class="sub">Change your admin password. Both owners use this one login.</p></div></div>{err}
-<form method="post" action="/admin/profile" class="card">
-<div class="fg"><label class="f">Current password</label>
-<input type="password" name="current_password" autocomplete="current-password" required></div>
-<div class="fg"><label class="f">New password</label><input type="password" name="new_password" autocomplete="new-password" required>
-<p class="hint">At least 8 characters. Changing it logs out your other devices.</p></div>
-<div class="fg"><label class="f">Confirm new password</label><input type="password" name="confirm_password" autocomplete="new-password" required></div>
-<button class="btn">Change password</button></form>
-{PUSH_CARD}"""
+    shown = email or form_email or "Admin"
+    initial = escape((shown[:1] or "A").upper())
+    body = f"""{_PAGES_CSS}
+<div class="head"><div><h1>Profile</h1>
+<p class="sub">Manage the login both owners share.</p></div></div>{err}
+<div class="pf-note">{_SHIELD}<div><b>Changing your password logs out your other devices.</b><br>
+Use at least 8 characters. A longer password with numbers and symbols is stronger.</div></div>
+<form method="post" action="/admin/profile" class="card pf-card">
+<div class="pf-card-h">Change password</div>
+<div class="pf-card-b">
+<div class="fg"><label class="f" for="pf-cur">Current password</label>
+<div class="pw"><input type="password" id="pf-cur" name="current_password" autocomplete="current-password" required>
+<button type="button" class="pw-t">Show</button></div></div>
+<div class="fg"><label class="f" for="pf-new">New password</label>
+<div class="pw"><input type="password" id="pf-new" name="new_password" autocomplete="new-password" required>
+<button type="button" class="pw-t">Show</button></div>
+<div class="meter" id="pf-meter"><i></i><i></i><i></i><i></i></div>
+<p class="mt" id="pf-strength"></p></div>
+<div class="fg"><label class="f" for="pf-conf">Confirm new password</label>
+<div class="pw"><input type="password" id="pf-conf" name="confirm_password" autocomplete="new-password" required>
+<button type="button" class="pw-t">Show</button></div>
+<p class="mt" id="pf-match"></p></div>
+<button class="btn pf-btn">Change password</button>
+</div></form>
+{PUSH_CARD}{_PROFILE_JS}"""
     return admin_page("Profile", body, "profile", msg)
 
 
@@ -798,13 +1080,15 @@ def _order_card(o: dict, q: str, view: str = "active") -> str:
     pay = PAYMENT_METHODS.get(o.get("payment_method"), {}).get("label") or (o.get("payment_method") or "")
     status = o.get("status") or "new"
     pstatus = o.get("payment_status") or "pending"
-    cls = "good" if status in ("delivered", "shipped") else ("ok" if status in ("new", "confirmed") else "")
+    st = "history" if view == "history" else (status if status in ("new", "confirmed", "shipped", "delivered", "cancelled") else "other")
+    cls = f"st-{st}"
     pcls = "good" if pstatus == "paid" else ""
     discount = float(o.get("discount") or 0)
     code = (o.get("discount_code") or "").strip()
     note = (o.get("promotion_note") or "").strip()
     has_promo = bool(discount > 0 or code or note)
-    promo_badge = '<span class="badge ok">Promotion</span>' if has_promo else ""
+    promo_badge = '<span class="badge promo">Promotion</span>' if has_promo else ""
+    foot_left = promo_badge or '<span class="s">Tap for details</span>'
     promo_box = ""
     if has_promo:
         bits = []
@@ -843,10 +1127,11 @@ def _order_card(o: dict, q: str, view: str = "active") -> str:
         status_field + '<p class="hint">Cancelled orders have no payment. Change the status to bring this order back.</p>'
         if cancelled else f'<div class="pair">{status_field}{payment_field}</div>')
 
-    return f"""<details class="order"><summary>
-<div class="grow"><p class="t">#{escape(o['order_number'])} · {escape(o['customer_name'])}</p>
+    return f"""<details class="order st-{st}"><summary>
+<div class="oband"><span class="on">#{escape(o['order_number'])}</span><span class="badge {cls}">{escape(status)}</span></div>
+<div class="obody"><p class="oc">{escape(o['customer_name'])}</p>
 <p class="s">{_dt(o.get('created_at'))} · {len(items)} item{'s' if len(items) != 1 else ''}</p></div>
-{promo_badge}<span class="badge {cls}">{escape(status)}</span><strong>{_money(o['total'])}</strong></summary>
+<div class="ofoot">{foot_left}<strong class="ototal">{_money(o['total'])}</strong></div></summary>
 <div class="ob">
 <section class="op"><h3>Customer</h3>
 <div class="kv"><span class="l">Name</span><b>{escape(o['customer_name'])}</b></div>
@@ -907,7 +1192,8 @@ def customers_page(customers: list, q: str) -> str:
     rows = []
     for c in customers:
         email = escape(c["email"]) if c["email"] else "No email"
-        rows.append(f"""<div class="row"><div class="grow"><p class="t">{escape(c['name'])}</p>
+        ini = escape((c["name"] or "?").strip()[:1].upper() or "?")
+        rows.append(f"""<div class="row cust" data-i="{ini}"><div class="grow"><p class="t">{escape(c['name'])}</p>
 <p class="s">{escape(c['phone'])} · {email}</p></div>
 <div class="s">{c['orders']} order{'s' if c['orders'] != 1 else ''} · {_money(c['spent'])}<br>Last: {_dt(c['last'])}</div>
 <a class="btn sm ghost" href="/admin/orders?q={escape(c['phone'] or c['name'])}">View orders</a></div>""")
@@ -960,16 +1246,142 @@ placeholder="e.g. Free shipping on orders over 1500 EGP" required></div>
 def deleted_page(groups: dict, days: int, msg: str | None = None) -> str:
     titles = {"products": "Products", "orders": "Orders", "promotions": "Promotions"}
     total = sum(len(v) for v in groups.values())
-    out = []
-    for kind, items in groups.items():
-        rows = "".join(f"""<div class="row"><div class="grow"><p class="t">{escape(i['label'])}</p>
-<p class="s">{escape(i['detail'])} · deleted {_dt(i['deleted_at'])}</p></div>
-<span class="badge">{i['days_left']} day{'s' if i['days_left'] != 1 else ''} left</span>
-<div class="acts"><form method="post" action="/admin/deleted/{kind}/{i['id']}/restore"><button class="btn sm ghost">Restore</button></form>
+
+    def card(kind: str, i: dict) -> str:
+        left = int(i["days_left"])
+        pct = max(4, min(100, round(left / max(days, 1) * 100)))
+        soon = " soon" if left <= 7 else ""
+        plural = "" if left == 1 else "s"
+        return f"""<div class="dl-card{soon}">
+<div class="dl-top"><span class="dl-ico">{_ICONS[kind]}</span>
+<div class="grow"><p class="t">{escape(i['label'])}</p><p class="s">{escape(i['detail'])}</p></div>
+<span class="badge{' ok' if soon else ''}">{left} day{plural} left</span></div>
+<div class="dl-bar"><i style="width:{pct}%"></i></div>
+<p class="dl-when">Deleted {_dt(i['deleted_at'])}</p>
+<div class="dl-acts">
+<form method="post" action="/admin/deleted/{kind}/{i['id']}/restore"><button class="btn sm">Restore</button></form>
 <form method="post" action="/admin/deleted/{kind}/{i['id']}/purge" onsubmit="return confirm('Delete this forever? This cannot be undone.')">
-<button class="link">Delete forever</button></form></div></div>""" for i in items)
-        out.append(f'<h2 class="sec">{titles[kind]}<small>{len(items)}</small></h2>' +
-                   (rows or '<div class="empty" style="padding:14px 0;text-align:left">Nothing here.</div>'))
-    body = f"""<div class="head"><div><h1>Recently deleted</h1>
-<p class="sub">Deleted items stay here for {days} days, then are removed for good. {total} item{'s' if total != 1 else ''} right now.</p></div></div>{''.join(out)}"""
+<button class="link">Delete forever</button></form></div></div>"""
+
+    tiles = "".join(
+        f'<div class="dl-tile"><span class="dl-ico">{_ICONS[k]}</span><b>{len(groups.get(k, []))}</b><small>{titles[k]}</small></div>'
+        for k in titles
+    )
+    sections = "".join(
+        f'<div class="dl-sec"><h2>{titles[k]}</h2><span>{len(groups[k])} item{"" if len(groups[k]) == 1 else "s"}</span></div>'
+        + "".join(card(k, i) for i in groups[k])
+        for k in titles if groups.get(k)
+    )
+    empty = (f'<div class="dl-empty"><span class="dl-ico">{_ICONS["trash"]}</span><b>Nothing deleted</b>'
+             f'<p>Anything you delete shows up here for {days} days, so you can bring it back.</p></div>')
+    body = f"""{_PAGES_CSS}
+<div class="head"><div><h1>Recently deleted</h1>
+<p class="sub">Deleted items stay here for {days} days, then are removed for good.</p></div></div>
+<div class="dl-tiles">{tiles}</div>
+{sections if total else empty}"""
     return admin_page("Recently deleted", body, "deleted", msg)
+
+
+# ------------------------------------------------------------ dashboard ----
+ADMIN_NAME = "Sobhy"
+
+_HOME_CSS = """<style>
+.hm-hero{position:relative;overflow:hidden;padding:34px 28px 30px;margin-bottom:14px;border:1px solid var(--line);
+  background:repeating-linear-gradient(45deg,rgba(199,154,70,.07) 0 1px,transparent 1px 9px),
+  linear-gradient(135deg,rgba(199,154,70,.20),rgba(199,154,70,.02) 65%),var(--ink-raised);}
+.hm-stitch{position:absolute;inset:8px;border:1px dashed rgba(199,154,70,.38);pointer-events:none;}
+.hm-hero h1{position:relative;font-size:68px;line-height:.95;margin:0 0 18px;letter-spacing:.01em;}
+.hm-hero h1 em{font-style:normal;color:var(--gold);}
+.hm-rule{position:relative;width:46px;height:3px;background:var(--gold);margin:0 0 14px;}
+.hm-date{position:relative;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0;
+  font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--paper-dim);}
+.hm-date b{color:var(--paper);font-weight:600;}
+.hm-tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.hm-tile{background:var(--ink-raised);border:1px solid var(--line);padding:16px;}
+.hm-tile.hot{border-color:var(--gold);background:linear-gradient(135deg,rgba(199,154,70,.16),rgba(199,154,70,.03));}
+.hm-k{margin:0 0 8px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-dim);font-weight:600;}
+.hm-tile.hot .hm-k{color:var(--gold);}
+.hm-v{margin:0;font-family:"Big Shoulders Display",sans-serif;font-size:32px;line-height:1;}
+.hm-n{margin:7px 0 0;font-size:12px;color:var(--paper-dim);}
+.hm-card{background:var(--ink-raised);border:1px solid var(--line);margin-bottom:14px;overflow:hidden;}
+.hm-card-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 16px;
+  background:rgba(241,236,226,.06);border-bottom:1px solid var(--line);}
+.hm-card-h h2{margin:0;font-family:"Big Shoulders Display",sans-serif;font-size:19px;text-transform:uppercase;letter-spacing:.04em;}
+.hm-card-h span,.hm-card-h a{font-size:12px;color:var(--paper-dim);}
+.hm-card-h a{text-decoration:underline;}
+.hm-card-h a:hover{color:var(--gold);}
+.hm-chart{display:flex;align-items:flex-end;gap:8px;height:150px;padding:18px 16px 0;}
+.hm-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0;}
+.hm-bar{width:100%;background:var(--gold-dim);border-radius:2px 2px 0 0;min-height:2px;}
+.hm-col.now .hm-bar{background:var(--gold);}
+.hm-lbl{display:flex;gap:8px;padding:8px 16px 14px;}
+.hm-lbl span{flex:1;text-align:center;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-dim);}
+.hm-lbl span.now{color:var(--gold);}
+.hm-ord{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);}
+.hm-ord:last-child{border-bottom:none;}
+.hm-ord:hover{background:rgba(241,236,226,.04);}
+.hm-ord .grow{flex:1 1 auto;min-width:0;}
+.hm-amt{font-size:13.5px;font-weight:600;white-space:nowrap;}
+.hm-empty{padding:26px 16px;text-align:center;color:var(--paper-dim);font-size:13.5px;}
+.hm-health{display:grid;grid-template-columns:repeat(3,1fr);}
+.hm-health div{padding:14px 10px;text-align:center;border-right:1px solid var(--line);}
+.hm-health div:last-child{border-right:none;}
+.hm-health b{display:block;font-family:"Big Shoulders Display",sans-serif;font-size:26px;line-height:1;margin-bottom:5px;}
+.hm-health b.warn{color:var(--gold);}
+.hm-health small{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--paper-dim);}
+.hm-links{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.hm-link{display:block;padding:14px 16px;background:var(--ink-raised);border:1px solid var(--line);
+  font-family:"Big Shoulders Display",sans-serif;font-size:19px;text-transform:uppercase;letter-spacing:.04em;}
+.hm-link:hover{border-color:var(--gold);color:var(--gold);}
+@media (min-width:700px){.hm-tiles{grid-template-columns:repeat(4,1fr);}.hm-links{grid-template-columns:repeat(4,1fr);}}
+</style>"""
+
+
+def dashboard_page(d: dict, msg: str | None = None) -> str:
+    h = d["hour"]
+    hello = "Good morning" if h < 12 else "Good afternoon" if h < 18 else "Good evening"
+    plural = lambda n, w: f"{n} {w}{'' if n == 1 else 's'}"
+    open_n = d["open_orders"]
+    tiles = [
+        ("Today's sales", _money(d["today_sales"]), plural(d["today_orders"], "order") + " today", False),
+        ("Last 30 days", _money(d["month_sales"]), plural(d["month_orders"], "order"), False),
+        ("Open orders", str(open_n), "Waiting on you" if open_n else "All caught up", open_n > 0),
+        ("Live promotions", str(d["live_promos"]), "Running right now" if d["live_promos"] else "None running", False),
+    ]
+    tiles_html = "".join(
+        f'<div class="hm-tile{" hot" if hot else ""}"><p class="hm-k">{k}</p><p class="hm-v">{v}</p><p class="hm-n">{n}</p></div>'
+        for k, v, n, hot in tiles
+    )
+
+    peak = max((x["sales"] for x in d["week"]), default=0) or 1
+    cols = "".join(
+        f'<div class="hm-col{" now" if x["today"] else ""}" title="{escape(_money(x["sales"]))}">'
+        f'<div class="hm-bar" style="height:{max(2, round(x["sales"] / peak * 100)) if x["sales"] else 2}%"></div></div>'
+        for x in d["week"]
+    )
+    labels = "".join(f'<span class="{"now" if x["today"] else ""}">{x["label"]}</span>' for x in d["week"])
+
+    if d["recent"]:
+        recent = "".join(
+            f'<a class="hm-ord" href="/admin/orders?q={escape(str(o.get("order_number") or ""))}">'
+            f'<div class="grow"><p class="t">Order {escape(str(o.get("order_number") or ""))}</p>'
+            f'<p class="s">{escape(str(o.get("customer_name") or ""))} · {_dt(o.get("created_at"))}</p></div>'
+            f'<span class="badge">{escape(str(o.get("status") or "new"))}</span>'
+            f'<span class="hm-amt">{_money(o.get("total"))}</span></a>'
+            for o in d["recent"]
+        )
+    else:
+        recent = '<div class="hm-empty">No orders yet. They will show up here as they come in.</div>'
+
+    so = d["sold_out"]
+    wd, _, rest = d["weekday"].partition(" ")
+    body = f"""{_HOME_CSS}
+<div class="hm-hero"><div class="hm-stitch"></div>
+<h1>Hi <em>{escape(ADMIN_NAME)}</em></h1>
+<div class="hm-rule"></div>
+<p class="hm-date"><b>{escape(wd)}</b><span>{escape(rest)}</span></p></div>
+<div class="hm-tiles">{tiles_html}</div>
+<div class="hm-card"><div class="hm-card-h"><h2>Sales, last 7 days</h2><span>{_money(sum(x["sales"] for x in d["week"]))}</span></div>
+<div class="hm-chart">{cols}</div><div class="hm-lbl">{labels}</div></div>
+<div class="hm-card"><div class="hm-card-h"><h2>Latest orders</h2><a href="/admin/orders">View all</a></div>{recent}</div>"""
+    return admin_page("Home", body, "home", msg)

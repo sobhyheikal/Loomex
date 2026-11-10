@@ -19,7 +19,7 @@ MANIFEST = {
     "display": "standalone",
     "background_color": "#201c18",
     "theme_color": "#201c18",
-    "icons": [{"src": "/static/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any"}],
+    "icons": [{"src": "/static/admin-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any"}],
 }
 
 SW_JS = r"""
@@ -30,8 +30,8 @@ self.addEventListener('push', function (e) {
   try { d = e.data.json(); } catch (err) {}
   e.waitUntil(self.registration.showNotification(d.title || 'Loomex', {
     body: d.body || '',
-    icon: '/static/apple-touch-icon.png',
-    badge: '/static/apple-touch-icon.png',
+    icon: '/static/admin-icon.png',
+    badge: '/static/admin-icon.png',
     tag: d.tag || 'loomex',
     data: { url: d.url || '/admin/orders' }
   }));

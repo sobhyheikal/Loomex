@@ -244,3 +244,9 @@ from routers import admin_earnings  # noqa: E402
 router.include_router(admin_earnings.router)
 from routers import admin_push  # noqa: E402
 router.include_router(admin_push.router)
+
+
+# ------------------------------------------------------------------ home ----
+@router.get("/home", response_class=HTMLResponse)
+def admin_home(msg: str | None = None):
+    return ui.dashboard_page(data.dashboard_data(), msg=MSGS.get(msg or ""))

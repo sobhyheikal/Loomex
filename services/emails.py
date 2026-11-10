@@ -137,7 +137,7 @@ def build_confirmation_html(order: dict) -> str:
   <tr><td align="center" style="padding:26px 10px 38px;">
     <div style="font-family:{HEAD_FONT};font-size:18px;letter-spacing:4px;text-transform:uppercase;color:{CREAM};">Thank you for choosing Loomex.</div>
     <div style="font-family:{BODY_FONT};font-size:12px;line-height:1.7;color:{MUTED};margin-top:12px;">
-      Questions about your order? Message us on <a href="{INSTAGRAM}" style="color:{GOLD};text-decoration:none;">Instagram @loomex_clothing</a>.</div>
+      Questions about your order? Message us on <a href="{INSTAGRAM}" style="color:{GOLD};text-decoration:none;">Instagram @loomex_clothing</a> or <a href="https://www.tiktok.com/@loomex1" style="color:{GOLD};text-decoration:none;">TikTok @loomex1</a>.</div>
   </td></tr>
 </table></td></tr></table></body></html>"""
 
@@ -152,7 +152,7 @@ def build_confirmation_text(order: dict) -> str:
     lines += ["", f"Shipping: {'Free' if s['shipping'] == 0 else _money(s['shipping'])}",
               f"Total: {_money(s['total'])}", f"Payment: {s['pay']}", "",
               f"Delivering to: {order.get('address')}, {order.get('city')}", "",
-              "Questions? Message us on Instagram @loomex_clothing"]
+              "Questions? Message us on Instagram @loomex_clothing or TikTok @loomex1"]
     return "\n".join(lines)
 
 

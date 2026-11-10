@@ -360,11 +360,11 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
           <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
         </svg>
       </a>
-      <span class="social-link" aria-label="TikTok">
+      <a href="https://www.tiktok.com/@loomex1" target="_blank" rel="noopener" class="social-link" aria-label="TikTok">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 7.917v4.034a9.948 9.948 0 0 1 -5 -1.951v4.5a6.5 6.5 0 1 1 -8 -6.326v4.326a2.5 2.5 0 1 0 4 2v-11.5h4.083a6.005 6.005 0 0 0 4.917 4.917z"></path>
         </svg>
-      </span>
+      </a>
     </div>
   </div>
 </footer>
@@ -515,10 +515,13 @@ HOME_CSS = """
 .hp-close { position: relative; overflow: hidden; margin: 56px 0 30px; padding: 54px 22px 46px; text-align: center;
   border: 1px solid rgba(199,154,70,.38);
   background: radial-gradient(80% 90% at 50% 0%, rgba(199,154,70,.15) 0%, rgba(199,154,70,0) 65%), var(--ink-raised); }
-.hp-close::before { content: "LOOMEX"; position: absolute; left: 50%; bottom: -0.2em; transform: translateX(-50%);
-  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; font-size: clamp(110px, 40vw, 320px); line-height: 1;
-  letter-spacing: 0.04em; color: transparent; -webkit-text-stroke: 1px rgba(245,240,232,.09);
-  white-space: nowrap; pointer-events: none; }
+.hp-close::before { /* hp-wm-fixed */
+  content: "LOOMEX"; position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+  z-index: 0; max-width: 100%; white-space: nowrap; pointer-events: none; user-select: none;
+  font-family: "Big Shoulders Display", sans-serif; font-weight: 700; line-height: .9; letter-spacing: .04em;
+  font-size: min(25vw, 230px); color: transparent; -webkit-text-stroke: 1px rgba(199, 154, 70, .2);
+  -webkit-mask-image: linear-gradient(to top, #000 10%, transparent 88%);
+  mask-image: linear-gradient(to top, #000 10%, transparent 88%); }
 .hp-close > * { position: relative; z-index: 1; }
 .hp-close-kicker { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0 0 16px;
   font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); }
@@ -1004,7 +1007,6 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
 
       <div class="hp-close-actions">
         <a href="/shop" class="btn">Shop the collection &rarr;</a>
-        <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener" class="btn hp-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><circle cx="12" cy="12" r="4"></circle><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>@loomex_clothing</a>
       </div>
     </section>
   </div>
@@ -1718,7 +1720,7 @@ def checkout_page(lines: list, subtotal: float, categories: list, cart_count: in
     <p class="pay-other">
       Want to pay another way, like InstaPay or an e-wallet? Choose <strong>{escape(cod_label)}</strong> here,
       then send us a DM on Instagram
-      <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener">@loomex_clothing</a>
+      <a href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener">@loomex_clothing</a> or TikTok <a href="https://www.tiktok.com/@loomex1" target="_blank" rel="noopener">@loomex1</a>
       and we'll arrange it with you.
     </p>
 
@@ -2323,7 +2325,11 @@ def returns_page(categories: list, cart_count: int = 0, subcategories: dict | No
       <li>Include your order number and the reason for the return, plus photos if the item arrived with a defect.</li>
       <li>We'll reply and walk you through the next steps.</li>
     </ol>
-    <div class="rt-contact">
+    <style>
+.rt-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0 4px;}
+.rt-actions .btn{width:100%;margin:0;padding-left:8px;padding-right:8px;text-align:center;}
+</style>
+<div class="rt-actions rt-contact">
       <a class="btn" href="https://www.instagram.com/loomex_clothing" target="_blank" rel="noopener">Instagram</a>
       <a class="btn" href="mailto:loomex.co@gmail.com">Email us</a>
     </div>
