@@ -16,7 +16,7 @@ FONTS = (
 )
 
 DEFAULT_DESCRIPTION = (
-    "Loomex — heavyweight cotton homewear. Tops, pants, hoodies, "
+    "Loomex — heavyweight cotton clothing. Tops, pants, hoodies, "
     "sweatshirts and jackets built for the hours that don't need an outfit."
 )
 # A real product photo used as the fallback social-share image for pages
@@ -1013,7 +1013,7 @@ def landing_page(categories: list, cart_count: int = 0, subcategories: dict | No
 </div>
 """
     body += HOME_JS
-    return layout("Loomex — Homewear", body, categories, cart_count,
+    return layout("Loomex — Clothing", body, categories, cart_count,
                   subcategories=subcategories, path="/")
 
 
@@ -1199,7 +1199,7 @@ def shop_page(products: list, categories: list, active_category: str | None, car
     else:
         shop_title = active_category.replace("-", " ").title() if active_category else "Shop All"
         shop_description = (
-            f"Shop {shop_title} at Loomex — heavyweight cotton homewear made for comfort."
+            f"Shop {shop_title} at Loomex — heavyweight cotton clothing made for comfort."
             if active_category else DEFAULT_DESCRIPTION
         )
     return layout(shop_title, body, categories, cart_count, active_category=active_category,
@@ -2019,7 +2019,7 @@ def success_page(order: dict, categories: list, subcategories: dict | None = Non
 
   <div class="receipt">
     <div class="receipt-brand">LOOMEX</div>
-    <p class="receipt-tagline">Homewear, woven for rest</p>
+    <p class="receipt-tagline">Built around your everyday</p>
 
     <div class="receipt-meta-row"><span>ORDER</span><strong>{escape(order['order_number'])}</strong></div>
     <div class="receipt-meta-row"><span>DATE</span><strong>{escape(date_str)}</strong></div>
