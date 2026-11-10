@@ -1,7 +1,6 @@
 """Loomex admin panel HTML. Standalone: it does not use the storefront layout."""
 
 import json
-from datetime import datetime, timezone
 from html import escape
 
 from config import PAYMENT_METHODS
