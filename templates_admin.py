@@ -167,6 +167,8 @@ details.order .ob{gap:12px;}
 .sw.on{background:var(--gold);border-color:var(--gold);}
 .sw.on .sw-knob{transform:translateX(20px);background:var(--ink);}
 .row.is-hidden .thumb,.row.is-hidden .grow{opacity:.5;}
+.oi .thumb{width:52px;height:64px;}
+.promo-op{border-color:var(--gold);}
 @media(max-width:560px){.two,.three{grid-template-columns:1fr;} h1{font-size:30px;}}
 </style>
 """
@@ -798,8 +800,26 @@ def _order_card(o: dict, q: str, view: str = "active") -> str:
     pstatus = o.get("payment_status") or "pending"
     cls = "good" if status in ("delivered", "shipped") else ("ok" if status in ("new", "confirmed") else "")
     pcls = "good" if pstatus == "paid" else ""
+    discount = float(o.get("discount") or 0)
+    code = (o.get("discount_code") or "").strip()
+    note = (o.get("promotion_note") or "").strip()
+    has_promo = bool(discount > 0 or code or note)
+    promo_badge = '<span class="badge ok">Promotion</span>' if has_promo else ""
+    promo_box = ""
+    if has_promo:
+        bits = []
+        if note:
+            bits.append(f'<div class="kv"><span class="l">Promotion</span><b>{escape(note)}</b></div>')
+        if code:
+            bits.append(f'<div class="kv"><span class="l">Code</span><b>{escape(code)}</b></div>')
+        if discount > 0:
+            bits.append(f'<div class="kv"><span class="l">Saved</span><b>{_money(discount)}</b></div>')
+        promo_box = f'<section class="op promo-op"><h3>Promotion used</h3>{"".join(bits)}</section>'
+    discount_line = (f'<div class="sum"><span>Discount{f" ({escape(code)})" if code else ""}</span>'
+                     f'<span>-{_money(discount)}</span></div>') if discount > 0 else ""
     item_rows = "".join(
-        f"""<div class="oi"><div class="grow"><p class="t">{escape(i['product_name'])}</p>
+        f"""<div class="oi"><div class="thumb">{f'<img src="{escape(i["image"])}" alt="" loading="lazy">' if i.get("image") else ""}</div>
+<div class="grow"><p class="t">{escape(i['product_name'])}</p>
 <p class="s">{escape(' / '.join(x for x in [i.get('size'), i.get('color')] if x))}</p></div>
 <div class="oi-r"><span class="s">{int(i['quantity'])} × {_money(i['unit_price'])}</span>
 <strong>{_money(float(i['unit_price']) * int(i['quantity']))}</strong></div></div>""" for i in items)
@@ -826,7 +846,7 @@ def _order_card(o: dict, q: str, view: str = "active") -> str:
     return f"""<details class="order"><summary>
 <div class="grow"><p class="t">#{escape(o['order_number'])} · {escape(o['customer_name'])}</p>
 <p class="s">{_dt(o.get('created_at'))} · {len(items)} item{'s' if len(items) != 1 else ''}</p></div>
-<span class="badge {cls}">{escape(status)}</span><strong>{_money(o['total'])}</strong></summary>
+{promo_badge}<span class="badge {cls}">{escape(status)}</span><strong>{_money(o['total'])}</strong></summary>
 <div class="ob">
 <section class="op"><h3>Customer</h3>
 <div class="kv"><span class="l">Name</span><b>{escape(o['customer_name'])}</b></div>
@@ -835,8 +855,10 @@ def _order_card(o: dict, q: str, view: str = "active") -> str:
 <div class="kv"><span class="l">Address</span><b>{escape(o['address'])}, {escape(o['city'])}</b></div></section>
 <section class="op"><h3>Items<small>{len(items)}</small></h3>{item_rows}
 <div class="ot"><div class="sum"><span>Subtotal</span><span>{_money(subtotal)}</span></div>
+{discount_line}
 <div class="sum"><span>Shipping ({escape(o['city'])})</span><span>{_money(o.get('shipping'))}</span></div>
 <div class="sum tot"><span>Total</span><span>{_money(o['total'])}</span></div></div></section>
+{promo_box}
 <section class="op"><h3>Payment</h3>
 <div class="kv"><span class="l">Method</span><b>{escape(pay)}</b></div>
 {pay_status}{proof}</section>
@@ -849,6 +871,22 @@ def _order_card(o: dict, q: str, view: str = "active") -> str:
 </div></details>"""
 
 
+ORDER_SYNC_JS = """<script>
+/* Delivered and Paid go together: picking one picks the other */
+document.addEventListener('change', function (e) {
+  var el = e.target;
+  if (!el || el.tagName !== 'SELECT') return;
+  var form = el.form;
+  if (!form) return;
+  var status = form.querySelector('select[name=status]');
+  var pay = form.querySelector('select[name=payment_status]');
+  if (!status || !pay) return;
+  if (el === status && status.value === 'delivered') pay.value = 'paid';
+  if (el === pay && pay.value === 'paid') status.value = 'delivered';
+});
+</script>"""
+
+
 def orders_page(orders: list, q: str, msg: str | None = None, view: str = "active") -> str:
     cards = "".join(_order_card(o, q, view) for o in orders)
     if not cards:
@@ -859,7 +897,7 @@ def orders_page(orders: list, q: str, msg: str | None = None, view: str = "activ
     body = f"""<div class="head"><div><h1>Orders</h1><p class="sub">Newest first · tap an order for the full details</p></div></div>
 <div class="tabs">{tabs}</div>
 <form class="search" method="get" action="/admin/orders"><input type="hidden" name="view" value="{escape(view)}"><input type="search" name="q" value="{escape(q)}" data-live autocomplete="off"
-placeholder="Search order number, name, phone or email"></form><div id="results">{cards}</div>"""
+placeholder="Search order number, name, phone or email"></form><div id="results">{cards}</div>{ORDER_SYNC_JS}"""
     return admin_page("Orders", body, "orders", msg)
 
 

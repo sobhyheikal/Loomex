@@ -272,13 +272,53 @@ def list_orders(q: str | None = None, limit: int = 100) -> list[dict]:
     if q:
         qb = qb.or_(f"order_number.ilike.*{q}*,customer_name.ilike.*{q}*,"
                     f"phone.ilike.*{q}*,email.ilike.*{q}*")
-    return qb.order("created_at", desc=True).limit(limit).execute().data or []
+    orders = qb.order("created_at", desc=True).limit(limit).execute().data or []
+    _attach_item_images(orders)
+    return orders
+
+
+def _attach_item_images(orders: list[dict]):
+    """Give every order item an `image` (the photo of the color that was bought)."""
+    ids = {i["product_id"] for o in orders for i in (o.get("order_items") or []) if i.get("product_id")}
+    if not ids:
+        return
+    try:
+        rows = supabase.table("products").select("id,image_url,color_images").in_("id", list(ids)).execute().data or []
+    except Exception:
+        return  # photos are a nice extra: never break the orders page over them
+    by_id = {str(p["id"]): p for p in rows}
+    for o in orders:
+        for i in o.get("order_items") or []:
+            p = by_id.get(str(i.get("product_id")))
+            if not p:
+                continue
+            wanted = (i.get("color") or "").strip().lower()
+            photo = None
+            for color, urls in (p.get("color_images") or {}).items():
+                if color.strip().lower() == wanted:
+                    photo = urls[0] if isinstance(urls, list) and urls else (urls if isinstance(urls, str) else None)
+                    break
+            i["image"] = photo or p.get("image_url") or ""
 
 
 def update_order_status(oid: str, status: str, payment_status: str = ""):
-    row = {"status": status[:40]}
+    """Delivered and Paid go together: picking one picks the other.
+    `delivered_at` remembers when the order was delivered (for the Completed tab)."""
+    status = status[:40]
+    payment_status = payment_status[:40]
+    if payment_status == "paid" and status != "cancelled":
+        status = "delivered"
+    if status == "delivered":
+        payment_status = "paid"
+    row = {"status": status}
     if payment_status:  # cancelled orders send only a status
-        row["payment_status"] = payment_status[:40]
+        row["payment_status"] = payment_status
+    old = (supabase.table("orders").select("status,delivered_at").eq("id", oid).limit(1).execute().data or [None])[0]
+    if status == "delivered":
+        if not old or old.get("status") != "delivered" or not old.get("delivered_at"):
+            row["delivered_at"] = _now().isoformat()
+    else:
+        row["delivered_at"] = None
     supabase.table("orders").update(row).eq("id", oid).execute()
 
 
@@ -287,40 +327,22 @@ ORDER_VIEWS = [("active", "Active"), ("cancelled", "Cancelled"),
 
 
 def filter_orders(orders: list[dict], view: str) -> list[dict]:
-    """Orders tabs. Completed = delivered within the last 7 days, History = older delivered."""
+    """Orders tabs. Completed = delivered within the last 7 days, History = delivered earlier.
+    The 7 days count from the day it was marked delivered (older rows fall back to the order date)."""
     if view == "all":
         return orders
     week_ago = _now() - timedelta(days=7)
     out = []
     for o in orders:
         status = o.get("status") or "new"
-        placed = promo_svc._parse(o.get("created_at")) or _now()
+        when = promo_svc._parse(o.get("delivered_at")) or promo_svc._parse(o.get("created_at")) or _now()
         if view == "active" and status not in ("delivered", "cancelled"):
             out.append(o)
         elif view == "cancelled" and status == "cancelled":
             out.append(o)
-        elif view == "completed" and status == "delivered" and placed >= week_ago:
+        elif view == "completed" and status == "delivered" and when >= week_ago:
             out.append(o)
-        elif view == "history" and status == "delivered" and placed < week_ago:
-            out.append(o)
-    return out
-
-def filter_orders(orders: list[dict], view: str) -> list[dict]:
-    """Orders tabs. Completed = delivered within the last 7 days, History = older delivered."""
-    if view == "all":
-        return orders
-    week_ago = _now() - timedelta(days=7)
-    out = []
-    for o in orders:
-        status = o.get("status") or "new"
-        placed = promo_svc._parse(o.get("created_at")) or _now()
-        if view == "active" and status not in ("delivered", "cancelled"):
-            out.append(o)
-        elif view == "cancelled" and status == "cancelled":
-            out.append(o)
-        elif view == "completed" and status == "delivered" and placed >= week_ago:
-            out.append(o)
-        elif view == "history" and status == "delivered" and placed < week_ago:
+        elif view == "history" and status == "delivered" and when < week_ago:
             out.append(o)
     return out
 
