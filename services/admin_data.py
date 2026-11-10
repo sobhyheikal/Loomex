@@ -278,44 +278,68 @@ def list_orders(q: str | None = None, limit: int = 100) -> list[dict]:
 
 
 def _attach_item_images(orders: list[dict]):
-    """Give every order item an `image` (the photo of the color that was bought)."""
-    ids = {i["product_id"] for o in orders for i in (o.get("order_items") or []) if i.get("product_id")}
-    if not ids:
-        return
+    """Give every order item an `image` (the photo of the color that was bought).
+    Items are matched to their product by product_id, or by product name when the id is missing."""
+    items = [i for o in orders for i in (o.get("order_items") or [])]
+    ids = {str(i["product_id"]) for i in items if i.get("product_id")}
+    names = {(i.get("product_name") or "").strip().lower() for i in items if not i.get("product_id")}
+    names.discard("")
+    by_id, by_name = {}, {}
     try:
-        rows = supabase.table("products").select("id,image_url,color_images").in_("id", list(ids)).execute().data or []
+        cols = "id,name,image_url,color_images"
+        if ids:
+            for p in supabase.table("products").select(cols).in_("id", list(ids)).execute().data or []:
+                by_id[str(p["id"])] = p
+        if names or any(i.get("product_id") and str(i["product_id"]) not in by_id for i in items):
+            for p in supabase.table("products").select(cols).execute().data or []:
+                by_name[(p.get("name") or "").strip().lower()] = p
     except Exception:
         return  # photos are a nice extra: never break the orders page over them
-    by_id = {str(p["id"]): p for p in rows}
-    for o in orders:
-        for i in o.get("order_items") or []:
-            p = by_id.get(str(i.get("product_id")))
-            if not p:
-                continue
-            wanted = (i.get("color") or "").strip().lower()
-            photo = None
-            for color, urls in (p.get("color_images") or {}).items():
-                if color.strip().lower() == wanted:
-                    photo = urls[0] if isinstance(urls, list) and urls else (urls if isinstance(urls, str) else None)
-                    break
-            i["image"] = photo or p.get("image_url") or ""
+    for i in items:
+        p = by_id.get(str(i.get("product_id"))) or by_name.get((i.get("product_name") or "").strip().lower())
+        if not p:
+            continue
+        wanted = (i.get("color") or "").strip().lower()
+        photo = None
+        for color, urls in (p.get("color_images") or {}).items():
+            if color.strip().lower() == wanted:
+                photo = urls[0] if isinstance(urls, list) and urls else (urls if isinstance(urls, str) else None)
+                break
+        i["image"] = photo or p.get("image_url") or ""
 
 
 def update_order_status(oid: str, status: str, payment_status: str = ""):
-    """Delivered and Paid go together: picking one picks the other.
+    """Delivered and Paid go together:
+      * choosing Delivered marks the order Paid
+      * choosing Paid marks the order Delivered
+      * moving a delivered order back to New / Confirmed / Shipped makes it unpaid again,
+        so it returns to the Active tab.
     `delivered_at` remembers when the order was delivered (for the Completed tab)."""
     status = status[:40]
     payment_status = payment_status[:40]
-    if payment_status == "paid" and status != "cancelled":
+    old = (supabase.table("orders").select("status,payment_status,delivered_at").eq("id", oid)
+           .limit(1).execute().data or [None])[0] or {}
+    old_status, old_pay = old.get("status") or "new", old.get("payment_status") or "pending"
+
+    status_changed = status != old_status
+    pay_changed = bool(payment_status) and payment_status != old_pay
+    pay = payment_status  # "" means: leave the payment alone (cancelled orders send only a status)
+
+    if status_changed:
+        if status == "delivered":
+            pay = "paid"
+        elif old_status == "delivered" and status != "cancelled":
+            pay = "pending"
+    elif pay_changed and payment_status == "paid" and status != "cancelled":
         status = "delivered"
-    if status == "delivered":
-        payment_status = "paid"
+    if status == "delivered" and pay != "paid" and (status_changed or pay_changed):
+        pay = "paid"
+
     row = {"status": status}
-    if payment_status:  # cancelled orders send only a status
-        row["payment_status"] = payment_status
-    old = (supabase.table("orders").select("status,delivered_at").eq("id", oid).limit(1).execute().data or [None])[0]
+    if pay:
+        row["payment_status"] = pay[:40]
     if status == "delivered":
-        if not old or old.get("status") != "delivered" or not old.get("delivered_at"):
+        if old_status != "delivered" or not old.get("delivered_at"):
             row["delivered_at"] = _now().isoformat()
     else:
         row["delivered_at"] = None

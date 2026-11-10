@@ -882,6 +882,7 @@ document.addEventListener('change', function (e) {
   var pay = form.querySelector('select[name=payment_status]');
   if (!status || !pay) return;
   if (el === status && status.value === 'delivered') pay.value = 'paid';
+  if (el === status && status.value !== 'delivered' && status.value !== 'cancelled' && pay.value === 'paid') pay.value = 'pending';
   if (el === pay && pay.value === 'paid') status.value = 'delivered';
 });
 </script>"""
