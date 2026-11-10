@@ -21,10 +21,7 @@ DEFAULT_DESCRIPTION = (
 )
 # A real product photo used as the fallback social-share image for pages
 # that aren't about one specific product (home, shop, cart, legal pages...).
-DEFAULT_OG_IMAGE = (
-    "https://djeqpdphxcjceognytrv.supabase.co/storage/v1/object/public/"
-    "product_images/Tank_Top-Front.JPG"
-)
+DEFAULT_OG_IMAGE = SITE_URL + "/static/og-image.png?v=1"
 
 # ----------------------------------------------------------------------
 # AD PIXELS — ids live in config.py (META_PIXEL_ID / TIKTOK_PIXEL_ID).
@@ -1388,7 +1385,7 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
         f"value: {p['price']:.2f}, currency: 'EGP'}});"
     )
     return layout(p["name"], body, categories, cart_count, subcategories=subcategories, show_back=True,
-                  description=product_description, image=p.get("image_url"), path=f"/product/{p['slug']}",
+                  description=product_description, image=(lambda u: (SITE_URL + u) if u and u.startswith("/") else u)(p.get("image_url")), path=f"/product/{p['slug']}",
                   meta_pixel_events=meta_view_content, tiktok_pixel_events=tiktok_view_content)
 
 
