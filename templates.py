@@ -1472,6 +1472,21 @@ def product_page(p: dict, categories: list, cart_count: int = 0, subcategories: 
         f"ttq.track('ViewContent', {{content_id: '{p['slug']}', content_type: 'product', "
         f"value: {p['price']:.2f}, currency: 'EGP'}});"
     )
+    _img = p.get("image_url") or ""
+    if _img.startswith("/"):
+        _img = SITE_URL + _img
+    _ld = {
+        "@context": "https://schema.org", "@type": "Product", "name": p["name"],
+        "description": product_description, "image": [_img] if _img else [],
+        "sku": p["slug"], "brand": {"@type": "Brand", "name": "Loomex"},
+        "offers": {
+            "@type": "Offer", "url": f"{SITE_URL}/product/{p['slug']}",
+            "priceCurrency": "EGP", "price": f"{float(p['price']):.2f}",
+            "itemCondition": "https://schema.org/NewCondition",
+            "availability": "https://schema.org/OutOfStock" if is_sold_out else "https://schema.org/InStock",
+        },
+    }
+    body += '<script type="application/ld+json">' + _json.dumps(_ld, ensure_ascii=False).replace("</", "<\\/") + "</script>"
     return layout(p["name"], body, categories, cart_count, subcategories=subcategories, show_back=True,
                   description=product_description, image=(lambda u: (SITE_URL + u) if u and u.startswith("/") else u)(p.get("image_url")), path=f"/product/{p['slug']}",
                   meta_pixel_events=meta_view_content, tiktok_pixel_events=tiktok_view_content)
