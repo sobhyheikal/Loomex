@@ -23,6 +23,15 @@ DEFAULT_DESCRIPTION = (
 # A real product photo used as the fallback social-share image for pages
 # that aren't about one specific product (home, shop, cart, legal pages...).
 DEFAULT_OG_IMAGE = SITE_URL + "/static/og-image.png?v=1"
+SEO_KEYWORDS = ("loomex, loomex clothing, loomex egypt, loomexclothing, hoodies egypt, zip up hoodie egypt, "
+    "heavyweight hoodie egypt, sweatshirt egypt, crewneck sweatshirt egypt, quarter zip egypt, quarter zip pullover, "
+    "sweatpants egypt, jogger pants egypt, pijama pants egypt, striped pants, tank tops egypt, cotton t-shirts egypt, "
+    "jackets egypt, heavyweight cotton clothing egypt, thick cotton hoodie, premium basics egypt, streetwear egypt, "
+    "casual wear egypt, everyday clothing egypt, matching set egypt, buy hoodies online egypt, clothing brand egypt, "
+    "egyptian clothing brand, online clothing store egypt, cash on delivery clothes egypt, clothing delivery cairo, "
+    "clothing delivery alexandria, clothing delivery giza, hoodie masr, malabes regali online, "
+    "هودي رجالي مصر, هودي زيبر, سويت شيرت رجالي, كوارتر زيب, بنطلون رياضي رجالي, سويت بانتس, بنطلون بيجامة, "
+    "ملابس رجالي اونلاين مصر, براند ملابس مصري, ملابس قطن ثقيل")
 
 # ----------------------------------------------------------------------
 # AD PIXELS — ids live in config.py (META_PIXEL_ID / TIKTOK_PIXEL_ID).
@@ -299,6 +308,7 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 {og_url_tag}
 {canonical_tag}
 {org_ld}
+<meta name="keywords" content="{escape(SEO_KEYWORDS)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{escape(page_title)}">
 <meta name="twitter:description" content="{escape(description)}">
@@ -1025,6 +1035,71 @@ function cardStep(el, delta){
 </script>
 """
 
+_SEO_CATS = {
+    "hoodies": ("Hoodies in Egypt",
+                "Heavyweight Hoodies & Zip-Up Hoodies in Egypt",
+                "Shop heavyweight cotton hoodies and zip up hoodies in Egypt. Thick, soft and built for everyday wear, with cash on delivery to Cairo, Alexandria and Giza.",
+                "هودي رجالي مصر - هودي زيبر قطن ثقيل"),
+    "sweatshirts": ("Sweatshirts & Quarter-Zips in Egypt",
+                    "Sweatshirts, Crewnecks & Quarter-Zip Pullovers in Egypt",
+                    "Shop crewneck sweatshirts and quarter zip pullovers in Egypt, made from heavyweight cotton for everyday comfort. Delivery across Egypt.",
+                    "سويت شيرت رجالي - كوارتر زيب مصر"),
+    "pants": ("Sweatpants & Jogger Pants in Egypt",
+              "Sweatpants, Jogger Pants & Pijama Pants in Egypt",
+              "Shop sweatpants, jogger pants, striped pants and pijama pants in Egypt. Heavyweight cotton, relaxed fit, cash on delivery.",
+              "بنطلون رياضي رجالي - سويت بانتس - بنطلون بيجامة"),
+    "tops": ("Cotton T-Shirts & Tops in Egypt",
+             "Heavyweight Cotton T-Shirts & Tops in Egypt",
+             "Shop premium cotton t-shirts and everyday tops in Egypt. Heavyweight cotton basics that hold their shape, delivered across Egypt.",
+             "تيشيرتات قطن رجالي مصر"),
+    "tank-tops": ("Tank Tops in Egypt",
+                  "Cotton Tank Tops in Egypt",
+                  "Shop cotton tank tops in Egypt. Soft, breathable casual wear with cash on delivery to Cairo, Alexandria and Giza.",
+                  "تانك توب قطن مصر"),
+    "jackets": ("Jackets in Egypt",
+                "Jackets in Egypt - Streetwear & Everyday Layers",
+                "Shop jackets in Egypt. Heavyweight streetwear layers for cooler days, from an Egyptian clothing brand with delivery across Egypt.",
+                "جاكيت رجالي مصر - ملابس ستريت وير"),
+}
+_SEO_ALL_TITLE = "Shop Heavyweight Cotton Clothing in Egypt"
+_SEO_ALL_H1 = "Heavyweight Cotton Clothing Brand in Egypt"
+_SEO_ALL_INTRO = ("Loomex is an Egyptian clothing brand and online clothing store in Egypt. Shop hoodies, sweatshirts, "
+                  "sweatpants, tank tops, cotton t-shirts and jackets in premium heavyweight cotton, for everyday and casual wear. "
+                  "Cash on delivery and delivery to Cairo, Alexandria, Giza and all of Egypt.")
+_SEO_ALL_AR = "براند ملابس مصري - ملابس اونلاين مصر - ملابس قطن ثقيل"
+_SEO_FAQ = [
+    ("Where can I buy hoodies and clothing online in Egypt?",
+     "You can buy hoodies, sweatshirts, sweatpants and jackets online from Loomex, an Egyptian clothing brand. People also search for this as hoodie masr or malabes regali online."),
+    ("Do you offer cash on delivery?",
+     "Yes. Pay in cash when your order arrives, or pay by InstaPay or wallet transfer."),
+    ("Do you deliver to Cairo, Alexandria and Giza?",
+     "Yes, we deliver across Egypt, including Cairo, Alexandria, Giza and the North Coast."),
+    ("What is heavyweight cotton clothing?",
+     "It is clothing made from thick, dense cotton that feels premium, holds its shape and lasts longer than thin basics."),
+    ("Do you sell matching sets?",
+     "Yes. Several pieces, such as the striped quarter-zip and striped pants, are made to be worn together as a matching set."),
+]
+
+
+def _seo_blocks(category, search):
+    """(heading block above the shop, intro + FAQ below it). Empty for searches."""
+    return "", ""  # nothing visible to customers; titles and descriptions carry the keywords
+    if (search or "").strip():
+        return "", ""
+    c = _SEO_CATS.get(category or "")
+    h1, intro, ar = (c[1], c[2], c[3]) if c else (_SEO_ALL_H1, _SEO_ALL_INTRO, _SEO_ALL_AR)
+    head = (f'<h1 class="seo-h1" style="font-family:\'Big Shoulders Display\',sans-serif;font-size:28px;'
+            f'text-transform:uppercase;margin:6px 0 14px;">{escape(h1)}</h1>')
+    faq = "".join(f"<h3 style=\"font-size:15px;margin:14px 0 4px;\">{escape(q)}</h3>"
+                  f"<p style=\"margin:0;color:var(--paper-dim);font-size:14px;line-height:1.6;\">{escape(a)}</p>"
+                  for q, a in _SEO_FAQ)
+    foot = (f'<section class="seo-text" style="max-width:720px;margin:36px auto 10px;padding:0 16px;">'
+            f'<p style="font-size:14px;line-height:1.7;color:var(--paper-dim);margin:0 0 8px;">{escape(intro)}</p>'
+            f'<p dir="rtl" lang="ar" style="font-size:15px;line-height:1.8;color:var(--paper-dim);margin:0 0 20px;">{escape(ar)}</p>'
+            f'<h2 style="font-size:18px;margin:0 0 6px;">Questions</h2>{faq}</section>')
+    return head, foot
+
+
 def shop_page(products: list, categories: list, active_category: str | None, cart_count: int = 0,
               subcategories: dict | None = None, active_subcategory: str | None = None,
               search: str | None = None) -> str:
@@ -1138,20 +1213,24 @@ def shop_page(products: list, categories: list, active_category: str | None, car
     else:
         grid = '<div class="empty">No products in this category yet.</div>'
 
+    _seo_head, _seo_foot = _seo_blocks(active_category, search)
     body = f"""
 {SHOP_CSS}
+{_seo_head}
 {search_form}
 <div id="shop-filters"><nav class="chips">{''.join(chips)}</nav>
 {sub_chips_html}</div>
 <div id="shop-results">{grid}</div>
+{_seo_foot}
 <script src="/static/shop-search.js?v=2" defer></script>
 """
     if search:
         shop_title = f'"{search}"'
         shop_description = f'Search results for "{search}" at Loomex.'
     else:
-        shop_title = active_category.replace("-", " ").title() if active_category else "Shop All"
-        shop_description = (
+        _c = _SEO_CATS.get(active_category or "")
+        shop_title = _c[0] if _c else (active_category.replace("-", " ").title() if active_category else _SEO_ALL_TITLE)
+        shop_description = _c[2] if _c else (
             f"Shop {shop_title} at Loomex — heavyweight cotton clothing made for comfort."
             if active_category else DEFAULT_DESCRIPTION
         )
