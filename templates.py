@@ -239,76 +239,8 @@ def _promo_banner_html() -> str:
         f'<span class="promo-banner-item"><span class="promo-banner-text">{escape(message)}</span>{sub_html}</span>'
         f'</div></div>{btn}</div>{_PROMO_BANNER_JS}'
     )
-    try:
-        from services.promotions import get_banner_promotions
-        promos = get_banner_promotions()
-    except Exception:
-        return ""
-    if not promos:
-        return ""
-    p = promos[0]  # newest live promotion
 
-    message = (p.get("message") or "").strip()
-    if not message:
-        return ""
-    subtitle = (p.get("subtitle") or "").strip()
-    url = (p.get("link_url") or "").strip()
-    safe = (url.startswith("/") and not url.startswith("//")) or url.startswith(("https://", "http://"))
 
-    sub_html = f'<span class="promo-banner-sub">{escape(subtitle)}</span>' if subtitle else ""
-    btn = ""
-    if url and safe:
-        btn_label = (p.get("link_text") or "").strip() or "Shop now"
-        btn = f'<a class="promo-banner-btn" href="{escape(url)}">{escape(btn_label)}</a>'
-
-    return (f'<div class="promo-banner"><span class="promo-banner-text">{escape(message)}</span>'
-            f'{sub_html}{btn}</div>')
-    try:
-        from services.promotions import get_banner_promotions, describe
-        promos = get_banner_promotions()
-    except Exception:
-        return ""
-    if not promos:
-        return ""
-    p = promos[0]  # newest live promotion
-
-    def first(*keys):
-        for k in keys:
-            v = p.get(k)
-            if isinstance(v, str) and v.strip():
-                return v.strip()
-        return ""
-
-    title = first("banner_text", "banner_title", "title", "name", "headline")
-    off = describe(p)
-    off = "" if off == "Banner only" else off
-    label = f"{title} · {off}" if title and off else (title or off)
-    if not label:
-        return ""
-
-    url = first("link_url", "link", "url", "cta_url", "button_url", "href")
-    if not (url.startswith("/") and not url.startswith("//")) and not url.startswith(("https://", "http://")):
-        url = ""
-    btn_label = first("button_text", "cta_text", "cta_label", "button_label") or "Shop now"
-    btn = f'<a class="promo-banner-btn" href="{escape(url)}">{escape(btn_label)}</a>' if url else ""
-
-    return f'<div class="promo-banner"><span class="promo-banner-text">{escape(label)}</span>{btn}</div>'
-    try:
-        from services.promotions import get_banner_promotions, describe
-        promos = get_banner_promotions()
-    except Exception:
-        return ""
-    parts = []
-    for p in promos:
-        text = (p.get("banner_text") or p.get("title") or p.get("name") or "").strip()
-        off = describe(p)
-        off = "" if off == "Banner only" else off
-        label = f"{text} — {off}" if text and off else (text or off)
-        if label:
-            parts.append(escape(label))
-    if not parts:
-        return ""
-    return f'<div class="promo-banner">{"  ·  ".join(parts)}</div>'
 _BADGE_TYPES = {"percent_off", "fixed_off", "bogo", "second_item_pct",
                 "buy_n_get_1", "buy_n_pct", "bundle_price", "min_spend_pct"}
 
@@ -1116,8 +1048,6 @@ SHOP_CSS = """
 .subtab.active{color:var(--gold);background:none;box-shadow:inset 0 -2px 0 var(--gold);}
 @media (min-width:560px){.subtabs{justify-content:center;}}
 @media (min-width:900px){.subtabs{padding-left:32px;padding-right:32px;}}
-.promo-banner-sub { display: none; font-size: 13px; opacity: 0.8; }
-@media (min-width: 700px) { .promo-banner-sub { display: inline; } }
 </style>
 <script>
 function cardShowColor(el, ci){
@@ -1819,6 +1749,7 @@ function loomexUpdateShipping(city) {{
   if (rate === undefined) return;
   if (LOOMEX_FREE_SHIP) rate = 0;
   document.getElementById('shipping-amount').textContent = LOOMEX_FREE_SHIP ? 'Free' : rate.toFixed(0) + ' EGP';
+  document.getElementById('total-amount').textContent = (LOOMEX_SUBTOTAL + rate).toFixed(0) + ' EGP';
   document.getElementById('shipping-hint').style.display = 'none';
   loomexCheckCity();
 }}
