@@ -10,14 +10,14 @@ from supabase_client import supabase
 router = APIRouter()
 
 
-@router.get("/robots.txt", include_in_schema=False)
+@router.api_route("/robots.txt", methods=["GET", "HEAD"], include_in_schema=False)
 def robots():
     text = ("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /cart\nDisallow: /checkout\n\n"
             f"Sitemap: {SITE_URL}/sitemap.xml\n")
     return PlainTextResponse(text, headers={"Cache-Control": "public, max-age=3600"})
 
 
-@router.get("/sitemap.xml", include_in_schema=False)
+@router.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
 def sitemap():
     urls = [(SITE_URL + "/", None), (SITE_URL + "/shop", None),
             (SITE_URL + "/returns", None), (SITE_URL + "/privacy-policy", None)]
