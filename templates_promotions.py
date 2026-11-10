@@ -158,10 +158,7 @@ def _form(f: dict, picker: list, categories: list, editing_id: str | None) -> st
 <div class="fg"><label class="f">Banner links to {_opt()}</label>
 <select name="link_choice" id="pm-link">{_link_options(categories, f.get('link_choice') or '/shop')}</select>
 <div class="pm-hide" id="pm-custom" hidden style="margin-top:8px"><input type="text" name="link_url" value="{escape(f.get('link_url') or '')}" placeholder="/shop?category=pants or https://..."></div></div>
-<div class="fg" style="margin-bottom:0"><label class="f">Discount code {_opt()}</label>
-<input type="text" name="code" maxlength="30" value="{escape(f.get('code') or '')}" placeholder="BOGO2026" autocapitalize="characters" autocomplete="off">
-<p class="hint">Customers type this at checkout. Leave it empty and the discount applies automatically.</p></div>
-</div></section>
+</section>
 
 <section class="sect"><div class="sect-h"><b>2</b><h2>Products</h2></div><div class="sect-b">
 <p class="hint" style="margin:0 0 10px">{_opt()} Pick the products this applies to. Pick none and it applies to every product.</p>

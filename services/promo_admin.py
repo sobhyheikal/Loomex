@@ -159,7 +159,7 @@ def build_row(f: dict) -> tuple[dict | None, str | None]:
 
     return {"message": title, "subtitle": subtitle or None,
             "link_url": url or None, "link_text": "Shop now" if url else None,
-            "code": code.upper() or None, "product_ids": ids, "discount_type": dtype,
+            "code": None,"product_ids": ids, "discount_type": dtype,
             "value": vals["value"], "min_qty": vals["min_qty"], "min_spend": vals["min_spend"],
             "bundle_same_product_only": bool(f.get("same_product")) and dtype == "bundle_price",
             "starts_at": s, "ends_at": e,
