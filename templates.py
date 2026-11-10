@@ -8,6 +8,7 @@ from datetime import datetime
 from html import escape
 
 from config import META_PIXEL_ID, PAYMENT_METHODS, SHIPPING_RATES, SITE_URL, TIKTOK_PIXEL_ID
+import json as _json
 
 FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
@@ -16,8 +17,8 @@ FONTS = (
 )
 
 DEFAULT_DESCRIPTION = (
-    "Loomex — heavyweight cotton clothing. Tops, pants, hoodies, "
-    "sweatshirts and jackets built for the hours that don't need an outfit."
+    "Loomex — heavyweight cotton hoodies, sweatshirts, sweatpants, tops and jackets. "
+    "Everyday clothing with delivery across Egypt."
 )
 # A real product photo used as the fallback social-share image for pages
 # that aren't about one specific product (home, shop, cart, legal pages...).
@@ -269,10 +270,16 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
         if show_back else ""
     )
 
-    page_title = f"{title} · Loomex"
+    page_title = ("Loomex | Heavyweight Cotton Hoodies, Sweatshirts & Sweatpants in Egypt"
+                  if title == "Loomex — Clothing" else f"{title} · Loomex")
     description = description or DEFAULT_DESCRIPTION
     image = image or DEFAULT_OG_IMAGE
     og_url_tag = f'<meta property="og:url" content="{escape(SITE_URL + path)}">' if SITE_URL else ""
+    canonical_tag = f'<link rel="canonical" href="{escape(SITE_URL + path)}">' if SITE_URL and path else ""
+    org_ld = ('<script type="application/ld+json">' + _json.dumps({
+        "@context": "https://schema.org", "@type": "Organization", "name": "Loomex",
+        "url": SITE_URL, "logo": SITE_URL + "/static/loomex-icon-v5.png",
+        "description": DEFAULT_DESCRIPTION}).replace("</", "<\\/") + '</script>') if SITE_URL else ""
     pixel_snippet = _meta_pixel_script(meta_pixel_events) + _tiktok_pixel_script(tiktok_pixel_events)
     promo_banner = _promo_banner_html()
     body_class = f"{section_class} has-banner".strip() if promo_banner else section_class
@@ -290,6 +297,8 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 <meta property="og:description" content="{escape(description)}">
 <meta property="og:image" content="{escape(image)}">
 {og_url_tag}
+{canonical_tag}
+{org_ld}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{escape(page_title)}">
 <meta name="twitter:description" content="{escape(description)}">

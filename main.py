@@ -59,3 +59,6 @@ from fastapi.responses import FileResponse as _FileResponse  # noqa: E402
 def _favicon():
     return _FileResponse("static/loomex-icon-v5.png", media_type="image/png",
                          headers={"Cache-Control": "no-cache"})
+
+from routers import seo  # noqa: E402
+app.include_router(seo.router)

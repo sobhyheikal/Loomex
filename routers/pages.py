@@ -24,10 +24,19 @@ def home(request: Request):
 def shop(request: Request, category: str | None = None, subcategory: str | None = None, q: str | None = None):
     products, subcategory = list_shop_products(category, subcategory, CATEGORIES, SUBCATEGORIES, search=q)
     cart_count = cart_item_count(get_cart(request))
-    return templates.shop_page(
+    html = templates.shop_page(
         products, CATEGORIES, category, cart_count,
         subcategories=SUBCATEGORIES, active_subcategory=subcategory, search=q,
     )
+    # each category / subcategory gets its own canonical address; searches are kept out of Google
+    from config import SITE_URL
+    if category in CATEGORIES:
+        own = f"{SITE_URL}/shop?category={category}" + (f"&subcategory={subcategory}" if subcategory else "")
+        html = html.replace(f'<link rel="canonical" href="{SITE_URL}/shop">',
+                            f'<link rel="canonical" href="{own}">', 1)
+    if (q or "").strip():
+        html = html.replace("</head>", '<meta name="robots" content="noindex, follow"></head>', 1)
+    return html
 
 
 # ----------------------------------------------------------- legal/trust ----
