@@ -52,7 +52,7 @@ def login(request: Request, password: str = Form("")):
         time.sleep(1)  # slows down guessing
         return HTMLResponse(ui.login_page(configured=True, first_time=acct is None,
                                           error="Wrong password."), status_code=401)
-    resp = RedirectResponse("/admin/orders", status_code=303)
+    resp = RedirectResponse("/admin/home", status_code=303)
     admin_auth.set_login_cookie(resp, request, acct)
     return resp
 
