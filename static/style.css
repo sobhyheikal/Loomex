@@ -255,7 +255,8 @@ body.has-banner .back-btn-wrap { top: 104px; }
   position: fixed;
   top: 0;
   left: 0;
-  bottom: 0;
+  height: 100vh;
+  height: 100dvh;
   width: 78%;
   max-width: 300px;
   background: var(--ink);
@@ -263,8 +264,9 @@ body.has-banner .back-btn-wrap { top: 104px; }
   z-index: 30;
   transform: translateX(-100%);
   transition: transform 0.25s ease;
-  padding: 20px 22px 30px;
+  padding: 20px 22px calc(110px + env(safe-area-inset-bottom));
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .drawer-close {
   display: block;
