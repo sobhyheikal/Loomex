@@ -161,16 +161,17 @@ CART_DRAWER_CSS = """
   font-size: 12.5px; text-decoration: underline; margin-top: 12px;
 }
 body.cart-open { overflow: hidden; }
-/* menu + cart panels: reach the very bottom on iPhone, and scroll above the browser bar */
-.drawer { top: 0; bottom: auto; height: 100vh; height: calc(100lvh + 150px); box-sizing: border-box;
-  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-  padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)); }
-.drawer-backdrop { top: 0; bottom: auto; height: 100vh; height: calc(100lvh + 150px); }
+/* menu: sticky instead of fixed, so iOS Safari lets it paint under the bottom toolbar */
+.drawer, .drawer-backdrop {
+  position: sticky; top: 0; left: 0; right: auto; bottom: auto;
+  height: calc(100vh + 200px); margin-bottom: calc(-100vh - 200px);
+  box-sizing: border-box;
+}
+.drawer-backdrop { display: block; width: 100%; z-index: 999; }
+.drawer { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)); z-index: 1000; }
 .cart-drawer { height: 100vh; height: 100dvh; }
-.drawer { z-index: 1000; }
-.drawer-backdrop { z-index: 999; }
-.drawer { outline: 4px solid red; }
-body:has(#menu-toggle:checked) > *:not(.drawer):not(.drawer-backdrop):not(.menu-toggle-input) { visibility: hidden; }
+
 @media (max-width: 700px) {
   .cart-drawer-foot { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 }
