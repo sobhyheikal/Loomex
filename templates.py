@@ -162,10 +162,10 @@ CART_DRAWER_CSS = """
 }
 body.cart-open { overflow: hidden; }
 /* menu + cart panels: reach the very bottom on iPhone, and scroll above the browser bar */
-.drawer { top: 0; bottom: auto; height: 100vh; height: calc(100dvh + 150px); box-sizing: border-box;
+.drawer { top: 0; bottom: auto; height: 100vh; height: calc(100lvh + 150px); box-sizing: border-box;
   overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)); }
-.drawer-backdrop { top: 0; bottom: auto; height: 100vh; height: calc(100dvh + 150px); }
+.drawer-backdrop { top: 0; bottom: auto; height: 100vh; height: calc(100lvh + 150px); }
 .cart-drawer { height: 100vh; height: 100dvh; }
 .drawer { z-index: 1000; }
 .drawer-backdrop { z-index: 999; }
