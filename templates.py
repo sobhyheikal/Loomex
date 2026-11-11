@@ -169,6 +169,8 @@ body.cart-open { overflow: hidden; }
 .cart-drawer { height: 100vh; height: 100dvh; }
 .drawer { z-index: 1000; }
 .drawer-backdrop { z-index: 999; }
+.drawer { outline: 4px solid red; }
+body:has(#menu-toggle:checked) > *:not(.drawer):not(.drawer-backdrop):not(.menu-toggle-input) { visibility: hidden; }
 @media (max-width: 700px) {
   .cart-drawer-foot { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 }
