@@ -161,6 +161,15 @@ CART_DRAWER_CSS = """
   font-size: 12.5px; text-decoration: underline; margin-top: 12px;
 }
 body.cart-open { overflow: hidden; }
+/* menu + cart panels: reach the very bottom on iPhone, and scroll above the browser bar */
+.drawer { top: 0; bottom: 0; height: 100vh; height: 100dvh; box-sizing: border-box;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+.drawer-backdrop { top: 0; bottom: 0; height: 100vh; height: 100dvh; }
+.cart-drawer { height: 100vh; height: 100dvh; }
+@media (max-width: 700px) {
+  .cart-drawer-foot { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+}
 .cart-line-img { object-fit: contain; background: rgba(128, 128, 128, 0.12); }
 </style>
 """
