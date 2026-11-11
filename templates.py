@@ -316,7 +316,7 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 {FONTS}
 <link rel="icon" type="image/png" href="/static/loomex-icon-v5.png"><link rel="apple-touch-icon" href="/static/loomex-icon-v5.png">
 
-<link rel="stylesheet" href="/static/style.css?v=8">
+<link rel="stylesheet" href="/static/style.css?v=9">
 {pixel_snippet}
 </head>
 <body class="{body_class}">
