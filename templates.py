@@ -167,6 +167,8 @@ body.cart-open { overflow: hidden; }
   padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)); }
 .drawer-backdrop { top: 0; bottom: auto; height: 100vh; height: calc(100dvh + 150px); }
 .cart-drawer { height: 100vh; height: 100dvh; }
+.drawer { z-index: 1000; }
+.drawer-backdrop { z-index: 999; }
 @media (max-width: 700px) {
   .cart-drawer-foot { padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 }
