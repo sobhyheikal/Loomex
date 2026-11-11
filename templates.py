@@ -297,7 +297,7 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>{escape(page_title)}</title>
 <meta name="description" content="{escape(description)}">
 <meta property="og:site_name" content="Loomex">
@@ -316,7 +316,7 @@ def layout(title: str, body: str, categories: list, cart_count: int = 0,
 {FONTS}
 <link rel="icon" type="image/png" href="/static/loomex-icon-v5.png"><link rel="apple-touch-icon" href="/static/loomex-icon-v5.png">
 
-<link rel="stylesheet" href="/static/style.css?v=7">
+<link rel="stylesheet" href="/static/style.css?v=8">
 {pixel_snippet}
 </head>
 <body class="{body_class}">
