@@ -266,6 +266,30 @@ def upload_image(folder: str, filename: str, content: bytes, content_type: str) 
     return str(url).rstrip("?")
 
 # --------------------------------------------------------------- orders ----
+_CACHE: dict = {}
+
+
+def _cached(key, ttl, fn):
+    """Remember fn()'s result for ttl seconds so repeat page views skip the database."""
+    from time import monotonic
+    hit = _CACHE.get(key)
+    if hit and monotonic() - hit[0] < ttl:
+        return hit[1]
+    val = fn()
+    _CACHE[key] = (monotonic(), val)
+    return val
+
+
+def _photo_products() -> list[dict]:
+    return _cached("photo_products", 120, lambda: supabase.table("products")
+                   .select("id,name,image_url,color_images").execute().data or [])
+
+
+def _customer_rows() -> list[dict]:
+    return _cached("customer_rows", 30, lambda: supabase.table("orders")
+                   .select("customer_name,phone,email,total,status,created_at")
+                   .is_("deleted_at", "null").order("created_at", desc=True)
+                   .limit(5000).execute().data or [])
 def list_orders(q: str | None = None, limit: int = 100) -> list[dict]:
     qb = supabase.table("orders").select("*, order_items(*)").is_("deleted_at", "null")
     q = _clean_search(q)
@@ -285,14 +309,11 @@ def _attach_item_images(orders: list[dict]):
     names = {(i.get("product_name") or "").strip().lower() for i in items if not i.get("product_id")}
     names.discard("")
     by_id, by_name = {}, {}
+    by_id, by_name = {}, {}
     try:
-        cols = "id,name,image_url,color_images"
-        if ids:
-            for p in supabase.table("products").select(cols).in_("id", list(ids)).execute().data or []:
-                by_id[str(p["id"])] = p
-        if names or any(i.get("product_id") and str(i["product_id"]) not in by_id for i in items):
-            for p in supabase.table("products").select(cols).execute().data or []:
-                by_name[(p.get("name") or "").strip().lower()] = p
+        for p in _photo_products():
+            by_id[str(p["id"])] = p
+            by_name[(p.get("name") or "").strip().lower()] = p
     except Exception:
         return  # photos are a nice extra: never break the orders page over them
     for i in items:
@@ -374,10 +395,7 @@ def filter_orders(orders: list[dict], view: str) -> list[dict]:
 # ------------------------------------------------------------ customers ----
 def list_customers(q: str | None = None) -> list[dict]:
     """Customers are built from orders (the shop has no accounts)."""
-    rows = (supabase.table("orders")
-            .select("customer_name,phone,email,total,status,created_at")
-            .is_("deleted_at", "null").order("created_at", desc=True)
-            .limit(5000).execute().data or [])
+    rows = _customer_rows()
     people: dict[str, dict] = {}
     for r in rows:  # newest first, so the first row seen has the latest details
         key = _digits(r.get("phone")) or (r.get("email") or "").lower() or (r.get("customer_name") or "").lower()
@@ -500,11 +518,29 @@ def dashboard_data() -> dict:
     from datetime import timedelta
     now = _now().astimezone(ADMIN_TZ)
     today = now.date()
-    try:
-        orders = (supabase.table("orders").select("*").is_("deleted_at", "null")
-                  .order("created_at", desc=True).limit(1000).execute().data or [])
-    except Exception:
-        orders = []
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _orders():  # only the 3 columns the numbers need
+        return (supabase.table("orders").select("total,status,created_at").is_("deleted_at", "null")
+                .order("created_at", desc=True).limit(1000).execute().data or [])
+
+    def _recent():
+        return (supabase.table("orders").select("*").is_("deleted_at", "null")
+                .order("created_at", desc=True).limit(5).execute().data or [])
+
+    def _prods():
+        return (supabase.table("products").select("id,in_stock,is_visible")
+                .is_("deleted_at", "null").execute().data or [])
+
+    def _safe(fn):
+        try:
+            return fn()
+        except Exception:
+            return []
+
+    with ThreadPoolExecutor(max_workers=3) as pool:  # the 3 queries run at the same time
+        f1, f2, f3 = pool.submit(_safe, _orders), pool.submit(_safe, _recent), pool.submit(_safe, _prods)
+        orders, recent, prods = f1.result(), f2.result(), f3.result()
 
     def state(o):
         s = str(o.get("status") or "").lower()
@@ -538,11 +574,6 @@ def dashboard_data() -> dict:
         if day in by_day:
             by_day[day] += total
 
-    try:
-        prods = (supabase.table("products").select("id,in_stock,is_visible")
-                 .is_("deleted_at", "null").execute().data or [])
-    except Exception:
-        prods = []
     visible = [p for p in prods if p.get("is_visible") is not False]
     return {
         "hour": now.hour,
@@ -551,7 +582,7 @@ def dashboard_data() -> dict:
         "month_sales": month_sales, "month_orders": month_orders,
         "open_orders": open_orders,
         "week": [{"label": d.strftime("%a"), "sales": by_day[d], "today": d == today} for d in days],
-        "recent": orders[:5],
+         "recent": recent,
         "visible_products": len(visible),
         "sold_out": sum(1 for p in visible if p.get("in_stock") is False),
         "live_promos": len(promo_svc.get_live_promotions()),
