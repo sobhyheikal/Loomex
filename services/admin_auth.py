@@ -44,12 +44,22 @@ def _secret() -> str:
 
 
 # ------------------------------------------------------------- account ----
+_ACCT_CACHE = {"t": 0.0, "v": None}
+_ACCT_TTL = 60  # seconds
+
+
 def get_account() -> dict | None:
+    now = time.time()
+    if now - _ACCT_CACHE["t"] < _ACCT_TTL:
+        return _ACCT_CACHE["v"]
     try:
         rows = supabase.table("admin_account").select("*").eq("id", 1).limit(1).execute().data
     except Exception:  # table not created yet -> fall back to the .env password
         return None
-    return rows[0] if rows else None
+    acct = rows[0] if rows else None
+    _ACCT_CACHE["t"] = now
+    _ACCT_CACHE["v"] = acct
+    return acct
 
 
 def valid_email(email: str) -> bool:
@@ -96,8 +106,9 @@ def save_account(password_hash: str):
     email = acct["email"] if acct else "admin@loomex.local"
     supabase.table("admin_account").upsert({
         "id": 1, "email": email, "password_hash": password_hash,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+          "updated_at": datetime.now(timezone.utc).isoformat(),
     }).execute()
+    _ACCT_CACHE["t"] = 0.0  # force a fresh read after a password change
 
 
 # --------------------------------------------------------------- cookie ----
