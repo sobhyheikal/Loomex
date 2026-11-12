@@ -1259,7 +1259,8 @@ GALLERY_CSS = """
 .pg{max-width:340px;margin:0 auto;padding:12px 16px 0;}
 .pg-group{display:none;}
 .pg-group.active{display:block;}
-.pg-view{position:relative;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:rgba(128,128,128,.12);}
+.pg-view{position:relative;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:rgba(128,128,128,.12);touch-action:pan-y;-webkit-user-select:none;user-select:none;}
+.pg-view img{-webkit-user-drag:none;-webkit-touch-callout:none;}
 .pg-view img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;}
 .pg-view img.active{display:block;}
 .pg-arrow{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:50%;
@@ -1297,8 +1298,28 @@ function pgStep(ci, delta){
   var imgs = g.querySelectorAll('.pg-view img');
   var cur = 0;
   imgs.forEach(function(im, i){ if (im.classList.contains('active')) cur = i; });
-  pgSet(ci, (cur + delta + imgs.length) % imgs.length);
+   pgSet(ci, (cur + delta + imgs.length) % imgs.length);
 }
+/* swipe / drag left or right on the photo to switch images (touch, mouse and trackpad) */
+(function(){
+  var sx = 0, sy = 0, view = null;
+  document.addEventListener('dragstart', function(e){
+    if (e.target.closest && e.target.closest('.pg-view')) e.preventDefault();
+  });
+  document.addEventListener('pointerdown', function(e){
+    view = e.target.closest ? e.target.closest('.pg-view') : null;
+    if (!view || e.target.closest('.pg-arrow')) { view = null; return; }
+    sx = e.clientX; sy = e.clientY;
+  });
+  document.addEventListener('pointerup', function(e){
+    if (!view) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy, g = view.closest('.pg-group');
+    view = null;
+    if (!g || Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    pgStep(g.dataset.ci, dx < 0 ? 1 : -1);
+  });
+  document.addEventListener('pointercancel', function(){ view = null; });
+})();
 </script>
 """
 SOLD_OUT_CSS = """
