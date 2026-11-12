@@ -1013,7 +1013,8 @@ SHOP_CSS = """
 .card{position:relative;}
 .card img{width:100%;height:auto;aspect-ratio:4/5;object-fit:contain;background:rgba(128,128,128,.10);display:none;}
 .card img.active{display:block;}
-.card-group{display:none;position:relative;}
+.card-group{display:none;position:relative;touch-action:pan-y;-webkit-user-select:none;user-select:none;}
+.card-group img{-webkit-user-drag:none;-webkit-touch-callout:none;}
 .card-group.active{display:block;}
 .card-arrow{position:absolute;top:50%;transform:translateY(-50%);width:26px;height:26px;border:0;border-radius:50%;
   background:rgba(0,0,0,.55);color:#fff;font-size:16px;line-height:1;cursor:pointer;z-index:2;display:flex;
@@ -1047,8 +1048,33 @@ function cardStep(el, delta){
   var cur = 0;
   imgs.forEach(function(im, i){ if (im.classList.contains('active')) cur = i; });
   var next = (cur + delta + imgs.length) % imgs.length;
-  imgs.forEach(function(im, i){ im.classList.toggle('active', i === next); });
+    imgs.forEach(function(im, i){ im.classList.toggle('active', i === next); });
 }
+/* swipe / drag left or right on a product photo to switch images (touch, mouse, trackpad) */
+(function(){
+  var sx = 0, sy = 0, grp = null, swiped = false;
+  document.addEventListener('dragstart', function(e){
+    if (e.target.closest && e.target.closest('.card-group')) e.preventDefault();
+  });
+  document.addEventListener('pointerdown', function(e){
+    grp = e.target.closest ? e.target.closest('.card-group') : null;
+    if (!grp || e.target.closest('.card-arrow')) { grp = null; return; }
+    sx = e.clientX; sy = e.clientY; swiped = false;
+  });
+  document.addEventListener('pointerup', function(e){
+    if (!grp) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy, g = grp;
+    grp = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    swiped = true;
+    cardStep(g, dx < 0 ? 1 : -1);
+  });
+  document.addEventListener('pointercancel', function(){ grp = null; });
+  /* a swipe must not open the product page the card links to */
+  document.addEventListener('click', function(e){
+    if (swiped) { swiped = false; e.preventDefault(); e.stopPropagation(); }
+  }, true);
+})();
 </script>
 """
 
