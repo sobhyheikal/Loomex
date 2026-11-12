@@ -161,15 +161,18 @@ CART_DRAWER_CSS = """
   font-size: 12.5px; text-decoration: underline; margin-top: 12px;
 }
 body.cart-open { overflow: hidden; }
-/* menu: sticky instead of fixed, so iOS Safari lets it paint under the bottom toolbar */
-.drawer, .drawer-backdrop {
-  position: sticky; top: 0; left: 0; right: auto; bottom: auto;
-  height: calc(100vh + 200px); margin-bottom: calc(-100vh - 200px);
-  box-sizing: border-box;
-}
-.drawer-backdrop { display: block; width: 100%; z-index: 999; }
-.drawer { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-  padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)); z-index: 1000; }
+/* menu: the real drawer stays fixed; a full-page-height dark panel + dim layer sit behind it as
+   normal page content, so they also paint under iOS Safari's floating bottom bar */
+body { position: relative; }
+.drawer { z-index: 1000; }
+.drawer-backdrop { z-index: 999; background: transparent; }  /* only catches taps to close */
+body::before, body::after { content: ""; position: absolute; top: 0; height: 100%; pointer-events: none; opacity: 0; }
+body::after  { left: 0; right: 0; background: rgba(0,0,0,.5); z-index: 996; transition: opacity .2s ease; }
+body::before { left: 0; width: 78%; max-width: 300px; background: var(--ink); z-index: 998;
+               border-right: 1px solid var(--line); transform: translateX(-100%); opacity: 1;
+               transition: transform .25s ease; }
+body:has(#menu-toggle:checked)::after  { opacity: 1; }
+body:has(#menu-toggle:checked)::before { transform: translateX(0); }
 .cart-drawer { height: 100vh; height: 100dvh; }
 
 @media (max-width: 700px) {
